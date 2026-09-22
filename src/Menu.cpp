@@ -31,6 +31,9 @@ void Menu::ejecutar() {
                 case 2:
                     registrarVenta();
                     break;
+                case 3:
+                    alVerReporteVentasDelDia();
+                    break;
                 case 0:
                     salir = true;
                     std::cout << "Hasta luego.\n";
@@ -52,6 +55,7 @@ void Menu::mostrarMenuPrincipal() const {
     std::cout << "\n=== Sistema de Inventario y Punto de Venta ===\n";
     std::cout << "1. Gestion de productos\n";
     std::cout << "2. Registrar venta\n";
+    std::cout << "3. Reporte de ventas del dia\n";
     std::cout << "0. Salir\n";
 }
 
@@ -211,6 +215,35 @@ void Menu::mostrarTablaProductos(const std::vector<Producto>& productos) const {
             std::cout << "  [STOCK BAJO]";
         }
         std::cout << "\n";
+    }
+}
+
+void Menu::alVerReporteVentasDelDia() const {
+    ReporteVentasDia reporte = gestorVentas_.generarReporteDelDia();
+
+    std::cout << "\n=== Reporte de ventas del dia ===\n";
+    std::cout << "Transacciones: " << reporte.numeroTransacciones << "\n";
+    std::cout << "Total vendido: $" << std::fixed << std::setprecision(2)
+              << reporte.totalVendido << "\n";
+
+    if (reporte.productosMasVendidos.empty()) {
+        std::cout << "Aun no se registran ventas hoy.\n";
+        return;
+    }
+
+    std::cout << "\nProductos mas vendidos:\n"
+              << std::left << std::setw(10) << "Codigo"
+              << std::setw(25) << "Nombre"
+              << std::right << std::setw(10) << "Unidades"
+              << std::setw(14) << "Total" << "\n";
+    std::cout << std::string(59, '-') << "\n";
+
+    for (const ResumenProducto& resumen : reporte.productosMasVendidos) {
+        std::cout << std::left << std::setw(10) << resumen.codigo
+                   << std::setw(25) << resumen.nombre
+                   << std::right << std::setw(10) << resumen.cantidadVendida
+                   << std::setw(14) << std::fixed << std::setprecision(2) << resumen.totalVendido
+                   << "\n";
     }
 }
 

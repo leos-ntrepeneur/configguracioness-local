@@ -9,11 +9,32 @@
 #ifndef GESTOR_VENTAS_H
 #define GESTOR_VENTAS_H
 
+#include <string>
 #include <vector>
 
 #include "DetalleVenta.h"
 #include "Inventario.h"
 #include "Venta.h"
+
+// Fila del reporte del dia: cuanto se vendio de UN producto, sumando todas
+// las ventas de hoy. Los `= 0` / `= 0.0` son inicializadores de miembro
+// (C++11 en adelante): si se crea un ResumenProducto sin darle valores
+// explicitos, arrancan en cero en vez de quedar con basura de memoria como
+// pasaria con un struct de C sin inicializar.
+struct ResumenProducto {
+    std::string codigo;
+    std::string nombre;
+    int cantidadVendida = 0;
+    double totalVendido = 0.0;
+};
+
+// Resultado completo del reporte de ventas del dia (Requisito 5).
+struct ReporteVentasDia {
+    int numeroTransacciones = 0;
+    double totalVendido = 0.0;
+    // Ordenado de mayor a menor cantidad vendida.
+    std::vector<ResumenProducto> productosMasVendidos;
+};
 
 class GestorVentas {
 public:
@@ -27,6 +48,11 @@ public:
 
     const std::vector<Venta>& listarVentas() const;
     std::size_t cantidadVentas() const;
+
+    // Recorre el historial, se queda solo con las ventas de HOY (Venta::
+    // esDelDiaActual) y calcula total vendido, numero de transacciones y el
+    // ranking de productos mas vendidos.
+    ReporteVentasDia generarReporteDelDia() const;
 
 private:
     Inventario& inventario_;

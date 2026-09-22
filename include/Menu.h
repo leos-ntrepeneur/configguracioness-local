@@ -39,6 +39,8 @@ private:
     void alBuscarProducto() const;
     void alVerAlertasStockBajo() const;
 
+    void alVerReporteVentasDelDia() const;
+
     // Compartida por alListarProductos() y alBuscarProducto() para no
     // duplicar el formato de tabla en dos lugares.
     void mostrarTablaProductos(const std::vector<Producto>& productos) const;

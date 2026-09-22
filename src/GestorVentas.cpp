@@ -1,6 +1,7 @@
 #include "GestorVentas.h"
 #include "Excepciones.h"
 
+#include <algorithm>
 #include <map>
 
 GestorVentas::GestorVentas(Inventario& inventario) : inventario_(inventario) {}
@@ -44,4 +45,48 @@ const std::vector<Venta>& GestorVentas::listarVentas() const {
 
 std::size_t GestorVentas::cantidadVentas() const {
     return ventas_.size();
+}
+
+ReporteVentasDia GestorVentas::generarReporteDelDia() const {
+    ReporteVentasDia reporte;
+
+    // Acumulamos por codigo de producto usando un map (igual que en
+    // Inventario): la clave garantiza que cada producto aparezca una sola
+    // vez en el resumen aunque se haya vendido en varias transacciones.
+    std::map<std::string, ResumenProducto> resumenPorCodigo;
+
+    for (const Venta& venta : ventas_) {
+        if (!venta.esDelDiaActual()) {
+            continue;
+        }
+        reporte.numeroTransacciones++;
+        reporte.totalVendido += venta.getTotal();
+
+        for (const DetalleVenta& detalle : venta.getDetalles()) {
+            // operator[] crea la entrada con el ResumenProducto por
+            // defecto (codigo/nombre vacios, cantidad y total en 0) la
+            // primera vez que se ve ese codigo, y la reutiliza despues.
+            ResumenProducto& resumen = resumenPorCodigo[detalle.getCodigoProducto()];
+            resumen.codigo = detalle.getCodigoProducto();
+            resumen.nombre = detalle.getNombreProducto();
+            resumen.cantidadVendida += detalle.getCantidad();
+            resumen.totalVendido += detalle.getSubtotal();
+        }
+    }
+
+    reporte.productosMasVendidos.reserve(resumenPorCodigo.size());
+    for (const auto& [codigo, resumen] : resumenPorCodigo) {
+        reporte.productosMasVendidos.push_back(resumen);
+    }
+
+    // std::sort con una lambda como criterio de orden: la lambda
+    // `[](const ResumenProducto& a, const ResumenProducto& b) { ... }` es
+    // una funcion anonima (sin nombre) definida en el momento de usarla,
+    // muy comun en C++ moderno para reemplazar comparadores de una linea.
+    std::sort(reporte.productosMasVendidos.begin(), reporte.productosMasVendidos.end(),
+              [](const ResumenProducto& a, const ResumenProducto& b) {
+                  return a.cantidadVendida > b.cantidadVendida;
+              });
+
+    return reporte;
 }

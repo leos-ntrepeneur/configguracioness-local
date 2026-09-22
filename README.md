@@ -6,7 +6,7 @@ Proyecto de portafolio orientado a mostrar buenas prácticas de C++ moderno:
 POO, separación en archivos `.h`/`.cpp` por clase, STL, `const` correctness
 y manejo de errores con excepciones.
 
-> **Estado actual:** Requisitos 1, 2, 3 y 4 completos:
+> **Estado actual:** Requisitos 1 a 5 completos:
 > - Alta, edición y baja de productos.
 > - Registro de ventas con carrito (agregar/quitar productos, validación
 >   de stock disponible en tiempo real) que descuenta el inventario al
@@ -16,9 +16,12 @@ y manejo de errores con excepciones.
 > - Alertas de stock bajo: se marcan en el listado y la búsqueda, tienen
 >   una vista dedicada ("Ver alertas de stock bajo") y se avisan al
 >   instante si una venta deja un producto por debajo de su mínimo.
+> - Reporte de ventas del día: total vendido, número de transacciones y
+>   ranking de productos más vendidos (por unidades), filtrando solo las
+>   ventas del día de calendario actual.
 >
-> Los siguientes requisitos (reporte de ventas del día, persistencia en
-> archivo) se agregan de forma incremental.
+> El siguiente requisito (persistencia en archivo) se agrega de forma
+> incremental.
 
 ## Estructura del proyecto
 
@@ -60,8 +63,8 @@ inventario-pos/
 - **Venta**: transacción cerrada e inmutable: fecha, lista de
   `DetalleVenta` y total calculado.
 - **GestorVentas**: valida stock suficiente para TODO el pedido antes de
-  tocar el inventario, descuenta stock a través de `Inventario` y guarda
-  el historial de ventas.
+  tocar el inventario, descuenta stock a través de `Inventario`, guarda
+  el historial de ventas y genera el reporte del día (`ReporteVentasDia`).
 - **Menu**: capa de presentación (menús de consola, incluido el flujo de
   carrito para registrar una venta). No contiene lógica de negocio, solo
   la invoca y maneja errores con `try/catch`.
@@ -136,7 +139,5 @@ cmake --build build
 
 ## Próximos pasos (roadmap del proyecto)
 
-5. Reporte de ventas del día (total vendido, productos más vendidos,
-   número de transacciones).
 6. Persistencia en archivo (CSV), dejando el diseño preparado para migrar
    a SQLite más adelante.
