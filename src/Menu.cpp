@@ -63,6 +63,7 @@ void Menu::gestionarProductos() {
         std::cout << "2. Editar un producto\n";
         std::cout << "3. Eliminar (baja) un producto\n";
         std::cout << "4. Listar productos\n";
+        std::cout << "5. Buscar producto (por nombre o codigo)\n";
         std::cout << "0. Volver al menu principal\n";
         // Cada operacion se envuelve en try/catch: si Producto/Inventario
         // lanzan una excepcion de negocio, la atrapamos aqui, mostramos el
@@ -75,6 +76,7 @@ void Menu::gestionarProductos() {
                 case 2: alEditarProducto(); break;
                 case 3: alEliminarProducto(); break;
                 case 4: alListarProductos(); break;
+                case 5: alBuscarProducto(); break;
                 case 0: volver = true; break;
                 default: std::cout << "Opcion no valida.\n";
             }
@@ -142,7 +144,38 @@ void Menu::alEliminarProducto() {
 }
 
 void Menu::alListarProductos() const {
-    std::vector<Producto> productos = inventario_.listarTodos();
+    mostrarTablaProductos(inventario_.listarTodos());
+}
+
+void Menu::alBuscarProducto() const {
+    std::cout << "\n-- Buscar producto --\n";
+    std::string texto = leerLinea("Nombre o codigo a buscar: ");
+    if (texto.empty()) {
+        throw EntradaInvalida("Escribe algo para buscar.");
+    }
+
+    // Primero probamos coincidencia EXACTA de codigo (busqueda O(log n) en
+    // el map de Inventario); si no hay, caemos a busqueda parcial por
+    // nombre. Asi "MART001" encuentra el producto exacto y "mart"
+    // encuentra por nombre aunque no sea un codigo valido.
+    if (inventario_.existeCodigo(texto)) {
+        // `{ ... }` aqui construye un std::vector<Producto> de un solo
+        // elemento a partir de una lista de inicializacion (otra novedad de
+        // C++11 en adelante, sin equivalente directo en C). Reutilizamos
+        // asi la misma funcion de tabla que usa la busqueda por nombre.
+        mostrarTablaProductos({inventario_.buscarPorCodigo(texto)});
+        return;
+    }
+
+    std::vector<Producto> encontrados = inventario_.buscarPorNombre(texto);
+    if (encontrados.empty()) {
+        std::cout << "No se encontraron productos que coincidan con \"" << texto << "\".\n";
+        return;
+    }
+    mostrarTablaProductos(encontrados);
+}
+
+void Menu::mostrarTablaProductos(const std::vector<Producto>& productos) const {
     if (productos.empty()) {
         std::cout << "No hay productos registrados.\n";
         return;

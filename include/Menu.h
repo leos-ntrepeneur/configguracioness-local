@@ -10,6 +10,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 #include "GestorVentas.h"
 #include "Inventario.h"
@@ -35,6 +36,11 @@ private:
     void alEditarProducto();
     void alEliminarProducto();
     void alListarProductos() const;
+    void alBuscarProducto() const;
+
+    // Compartida por alListarProductos() y alBuscarProducto() para no
+    // duplicar el formato de tabla en dos lugares.
+    void mostrarTablaProductos(const std::vector<Producto>& productos) const;
 
     // --- Registro de ventas ---
     void registrarVenta();
