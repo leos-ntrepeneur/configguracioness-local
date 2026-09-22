@@ -273,6 +273,46 @@ problemas para que Visual Studio detectara CMake correctamente (ver el
 historial de este proyecto), **Qt Creator es el camino recomendado** — es
 el IDE que Qt mantiene específicamente para que esto funcione sin fricción.
 
+## Validación de datos y "hardening" (QA de seguridad)
+
+Además de las validaciones obvias (campos vacíos, precios negativos), el
+proyecto pasó por una revisión enfocada en **qué podría romper el sistema
+o corromper datos**, no solo en qué se ve mal. Todo vive en un solo punto
+de control — el constructor y los setters de `Producto` — para que sea
+imposible crear un producto inválido sin importar si la entrada viene de
+la consola, la GUI, o un archivo `productos.csv` editado a mano:
+
+- **Límites de negocio explícitos** (`Producto::PRECIO_MAXIMO`,
+  `Producto::STOCK_MAXIMO`): sin un tope superior, una cantidad vendida
+  muy grande sumada al carrito podía **desbordar un `int`** (comportamiento
+  indefinido en C++, no solo "un número raro") y, en el peor caso teórico,
+  terminar *aumentando* el stock en vez de descontarlo. Se cerró en dos
+  capas: un tope de negocio real (ningún producto tiene más de un millón
+  de unidades) y aritmética en `long long` en los puntos donde se suman
+  cantidades (`Menu::agregarAlCarrito`, `PestanaVentas::alAgregarAlCarrito`,
+  `GestorVentas::registrarVenta`).
+- **`NaN`/`Infinity` como precio**: `std::stod("nan")` y `std::stod("inf")`
+  son válidos según el estándar de C++ — un `productos.csv` editado a mano
+  con un precio así se cargaba sin error y contaminaba silenciosamente
+  cualquier total que lo incluyera (una comparación con `NaN` siempre da
+  falso, así que ni el chequeo de "no negativo" lo atajaba). Ahora
+  `Producto` exige `std::isfinite(precio)`.
+- **Inyección en el archivo CSV**: un nombre/categoría con una coma o un
+  salto de línea rompía la estructura de filas y columnas del archivo.
+  Se valida que ningún campo de texto contenga comas ni caracteres de
+  control.
+- **Límite de longitud** en código/nombre/categoría, para que un dato
+  absurdamente largo no infle el archivo ni rompa el layout de la tabla.
+
+Verificado con ataques reales, no solo revisión de código: craftié un
+`productos.csv` a mano con filas de precio `nan`/`inf`, stock de 99
+millones y nombres con bytes de control, y confirmé que el programa las
+descarta silenciosamente sin corromper el resto del inventario; y
+reproduje el escenario exacto de desbordamiento (crear un producto al
+límite de stock y pedir una cantidad de 2,000,000,000 en una sola
+operación) para confirmar que ahora se rechaza con un mensaje claro en
+vez de comportamiento indefinido.
+
 ## Ideas para seguir extendiendo el proyecto
 
 Estas no forman parte de los requisitos originales, pero son pasos

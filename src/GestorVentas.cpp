@@ -16,20 +16,39 @@ const Venta& GestorVentas::registrarVenta(const std::vector<DetalleVenta>& detal
     // contra el inventario antes de modificar nada. Si valida uno por uno
     // mientras descuenta, un producto sin stock a mitad de la venta dejaria
     // el inventario descontado a medias.
-    std::map<std::string, int> cantidadPorCodigo;
+    //
+    // Se acumula en `long long` (64 bits) en vez de `int` (32 bits) a
+    // proposito: cada DetalleVenta individual ya viene acotado a
+    // Producto::STOCK_MAXIMO (ver DetalleVenta.cpp), pero si el MISMO
+    // codigo aparece en muchos detalles dentro de una sola venta, la SUMA
+    // de varios de esos maximos si podria desbordar un int (un int se
+    // desborda alrededor de 2,147 millones; bastarian ~2,148 detalles de
+    // 1,000,000 cada uno). Un long long en una maquina moderna llega a
+    // mas de 9 trillones, asi que la suma jamas se acerca a su limite;
+    // el resultado se valida contra STOCK_MAXIMO (con margen de sobra)
+    // antes de volver a un int mas abajo.
+    std::map<std::string, long long> cantidadPorCodigo;
     for (const DetalleVenta& detalle : detalles) {
-        cantidadPorCodigo[detalle.getCodigoProducto()] += detalle.getCantidad();
+        long long& acumulado = cantidadPorCodigo[detalle.getCodigoProducto()];
+        acumulado += detalle.getCantidad();
+        if (acumulado > Producto::STOCK_MAXIMO) {
+            throw EntradaInvalida("La cantidad solicitada de '" + detalle.getCodigoProducto() +
+                                   "' supera el maximo permitido.");
+        }
     }
     for (const auto& [codigo, cantidadSolicitada] : cantidadPorCodigo) {
         const Producto& producto = inventario_.buscarPorCodigo(codigo); // lanza ProductoNoEncontrado
         if (cantidadSolicitada > producto.getStock()) {
-            throw StockInsuficiente(codigo, producto.getStock(), cantidadSolicitada);
+            // static_cast<int> es seguro aqui: el bucle de arriba ya
+            // garantizo que cantidadSolicitada <= Producto::STOCK_MAXIMO,
+            // que cabe de sobra en un int.
+            throw StockInsuficiente(codigo, producto.getStock(), static_cast<int>(cantidadSolicitada));
         }
     }
 
     // Segunda pasada: ya confirmamos que todo alcanza, ahora si descontamos.
     for (const auto& [codigo, cantidad] : cantidadPorCodigo) {
-        inventario_.descontarStock(codigo, cantidad);
+        inventario_.descontarStock(codigo, static_cast<int>(cantidad));
     }
 
     // emplace_back construye la Venta directamente dentro del vector (con

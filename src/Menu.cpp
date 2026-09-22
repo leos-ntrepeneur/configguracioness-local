@@ -346,17 +346,36 @@ void Menu::agregarAlCarrito(std::map<std::string, int>& carrito) {
     if (cantidad <= 0) {
         throw EntradaInvalida("La cantidad debe ser mayor a cero.");
     }
+    // Sin este limite, alguien podria escribir una cantidad cercana al
+    // maximo de un int (leerEntero no tiene techo propio) y, sumada a lo
+    // que ya hubiera en el carrito, DESBORDAR el int de abajo -- un
+    // desborde de entero con signo es comportamiento indefinido en C++,
+    // no simplemente "da un numero raro". Producto::STOCK_MAXIMO ya es el
+    // limite real de cualquier stock, asi que pedir mas que eso de una
+    // vez nunca puede ser una venta valida de todos modos.
+    if (cantidad > Producto::STOCK_MAXIMO) {
+        throw EntradaInvalida("La cantidad maxima por movimiento es " +
+                               std::to_string(Producto::STOCK_MAXIMO) + " unidades.");
+    }
 
     // Si el producto ya estaba en el carrito, sumamos a lo que ya habia
     // pedido, y validamos el TOTAL acumulado contra el stock real (el
-    // stock del inventario todavia no se ha tocado).
+    // stock del inventario todavia no se ha tocado). Se suma en long long
+    // como defensa adicional: con el limite de arriba ya no deberia poder
+    // desbordar un int, pero sumar en 64 bits y recien despues comparar
+    // es gratis y quita cualquier duda.
     int yaEnCarrito = carrito.count(codigo) ? carrito.at(codigo) : 0;
-    int totalSolicitado = yaEnCarrito + cantidad;
+    long long totalSolicitado = static_cast<long long>(yaEnCarrito) + cantidad;
     if (totalSolicitado > producto.getStock()) {
-        throw StockInsuficiente(codigo, producto.getStock(), totalSolicitado);
+        // static_cast<int> es seguro: totalSolicitado esta acotado por
+        // yaEnCarrito (<= STOCK_MAXIMO por invariante del carrito) mas
+        // cantidad (<= STOCK_MAXIMO por el chequeo de arriba), asi que
+        // como mucho vale 2 * STOCK_MAXIMO -- muy por debajo del limite
+        // de un int.
+        throw StockInsuficiente(codigo, producto.getStock(), static_cast<int>(totalSolicitado));
     }
 
-    carrito[codigo] = totalSolicitado;
+    carrito[codigo] = static_cast<int>(totalSolicitado);
     std::cout << producto.getNombre() << " agregado al carrito (cantidad en carrito: "
               << totalSolicitado << ").\n";
 }

@@ -203,20 +203,32 @@ void PestanaVentas::alAgregarAlCarrito() {
         const Producto& producto = inventario_.buscarPorCodigo(codigo.toStdString());
 
         bool confirmado = false;
+        // El rango (1, Producto::STOCK_MAXIMO) evita que el propio widget
+        // deje escribir una cantidad absurda de entrada; ver mas abajo por
+        // que ESO SOLO no basta para evitar un desborde de enteros.
         int cantidad = QInputDialog::getInt(this, "Cantidad",
                                              "Cantidad de \"" + QString::fromStdString(producto.getNombre()) + "\":",
-                                             1, 1, 1'000'000, 1, &confirmado);
+                                             1, 1, Producto::STOCK_MAXIMO, 1, &confirmado);
         if (!confirmado) {
             return; // el usuario le dio "Cancelar" en el dialogo de cantidad.
         }
 
+        // Se suma en long long (64 bits) aunque el QInputDialog ya acote
+        // cada cantidad individual: si el usuario le da "Agregar" muchas
+        // veces seguidas al mismo producto, yaEnCarrito podria seguir
+        // creciendo, y sumar dos int cercanos al maximo de un int
+        // (2,147 millones) es un desborde de entero con signo --
+        // comportamiento indefinido en C++, no solo "un numero raro".
         int yaEnCarrito = carrito_.count(codigo.toStdString()) ? carrito_.at(codigo.toStdString()) : 0;
-        int totalSolicitado = yaEnCarrito + cantidad;
+        long long totalSolicitado = static_cast<long long>(yaEnCarrito) + cantidad;
         if (totalSolicitado > producto.getStock()) {
-            throw StockInsuficiente(codigo.toStdString(), producto.getStock(), totalSolicitado);
+            // Seguro: totalSolicitado <= 2 * Producto::STOCK_MAXIMO en el
+            // peor caso (ver Producto.h), muy por debajo del limite de un int.
+            throw StockInsuficiente(codigo.toStdString(), producto.getStock(),
+                                     static_cast<int>(totalSolicitado));
         }
 
-        carrito_[codigo.toStdString()] = totalSolicitado;
+        carrito_[codigo.toStdString()] = static_cast<int>(totalSolicitado);
         actualizarCarrito();
     } catch (const std::exception& e) {
         QMessageBox::warning(this, "No se pudo agregar", e.what());

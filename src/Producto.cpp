@@ -1,16 +1,66 @@
 #include "Producto.h"
 #include "Excepciones.h"
 
+#include <cmath>
+
 namespace {
 
 // El inventario se persiste en CSV (ver RepositorioProductosCsv), donde la
-// coma es el separador de campos. Si un nombre/categoria pudiera contener
-// una coma, romperia el formato del archivo al guardar. En vez de
-// implementar comillas/escapado (como hace un CSV "de verdad"), optamos
-// por la solucion mas simple para un negocio pequeno: no permitirlas.
-void validarSinComas(const std::string& valor, const std::string& nombreCampo) {
+// coma es el separador de campos y el salto de linea separa filas. Un
+// caracter de control (codigo ASCII menor a 0x20: salto de linea, retorno
+// de carro, tabulador...) que se cuele en nombre/categoria/codigo puede
+// romper la estructura del archivo al guardar -- una fila terminaria a la
+// mitad y la siguiente carga leeria datos con las columnas desalineadas.
+// Tambien evita "inyectar" secuencias de control en la salida de consola.
+// Ademas limitamos el largo: nada en el nombre de un articulo de
+// ferreteria necesita mas de 100 caracteres, y evita que un dato
+// absurdamente largo (por accidente o a proposito) infle el archivo o
+// rompa el ancho de columnas de la tabla en la GUI.
+void validarTexto(const std::string& valor, const std::string& nombreCampo, std::size_t longitudMaxima) {
     if (valor.find(',') != std::string::npos) {
         throw EntradaInvalida(nombreCampo + " no puede contener comas.");
+    }
+    for (unsigned char c : valor) {
+        if (c < 0x20) {
+            throw EntradaInvalida(nombreCampo + " no puede contener saltos de linea ni caracteres de control.");
+        }
+    }
+    if (valor.size() > longitudMaxima) {
+        throw EntradaInvalida(nombreCampo + " no puede tener mas de " +
+                               std::to_string(longitudMaxima) + " caracteres.");
+    }
+}
+
+// Valida un precio: no negativo, dentro de un rango de negocio razonable,
+// y "finito". IMPORTANTE: std::cin >> double (usado en la consola) acepta
+// como validas las cadenas "inf", "infinity" y "nan" -- las interpreta
+// como los valores especiales de punto flotante del mismo nombre, no como
+// un error de formato. Sin este chequeo, un precio "nan" pasaria de largo
+// las comparaciones `< 0.0` y `> PRECIO_MAXIMO` (CUALQUIER comparacion con
+// NaN da falso, incluidas esas dos) y quedaria guardado como precio
+// valido; despues, cualquier total que lo sumara quedaria "contaminado"
+// con NaN de forma silenciosa, sin ningun error visible. std::isfinite
+// devuelve false tanto para NaN como para +-infinito, y hay que revisarlo
+// ANTES que los rangos normales, no en su lugar.
+void validarPrecio(double precio) {
+    if (!std::isfinite(precio)) {
+        throw EntradaInvalida("El precio debe ser un numero valido (no puede ser infinito ni NaN).");
+    }
+    if (precio < 0.0) {
+        throw EntradaInvalida("El precio no puede ser negativo.");
+    }
+    if (precio > Producto::PRECIO_MAXIMO) {
+        throw EntradaInvalida("El precio no puede superar " + std::to_string(Producto::PRECIO_MAXIMO) + ".");
+    }
+}
+
+void validarStock(int stock, const std::string& nombreCampo) {
+    if (stock < 0) {
+        throw EntradaInvalida(nombreCampo + " no puede ser negativo.");
+    }
+    if (stock > Producto::STOCK_MAXIMO) {
+        throw EntradaInvalida(nombreCampo + " no puede superar " +
+                               std::to_string(Producto::STOCK_MAXIMO) + " unidades.");
     }
 }
 
@@ -39,18 +89,12 @@ Producto::Producto(std::string codigo,
     if (nombre_.empty()) {
         throw EntradaInvalida("El nombre del producto no puede estar vacio.");
     }
-    validarSinComas(codigo_, "El codigo");
-    validarSinComas(nombre_, "El nombre");
-    validarSinComas(categoria_, "La categoria");
-    if (precio_ < 0.0) {
-        throw EntradaInvalida("El precio no puede ser negativo.");
-    }
-    if (stock_ < 0) {
-        throw EntradaInvalida("El stock no puede ser negativo.");
-    }
-    if (stockMinimo_ < 0) {
-        throw EntradaInvalida("El stock minimo no puede ser negativo.");
-    }
+    validarTexto(codigo_, "El codigo", CODIGO_LONGITUD_MAXIMA);
+    validarTexto(nombre_, "El nombre", NOMBRE_LONGITUD_MAXIMA);
+    validarTexto(categoria_, "La categoria", CATEGORIA_LONGITUD_MAXIMA);
+    validarPrecio(precio_);
+    validarStock(stock_, "El stock");
+    validarStock(stockMinimo_, "El stock minimo");
 }
 
 const std::string& Producto::getCodigo() const { return codigo_; }
@@ -64,32 +108,40 @@ void Producto::setNombre(std::string nombre) {
     if (nombre.empty()) {
         throw EntradaInvalida("El nombre del producto no puede estar vacio.");
     }
-    validarSinComas(nombre, "El nombre");
+    validarTexto(nombre, "El nombre", NOMBRE_LONGITUD_MAXIMA);
     nombre_ = std::move(nombre);
 }
 
 void Producto::setPrecio(double precio) {
-    if (precio < 0.0) {
-        throw EntradaInvalida("El precio no puede ser negativo.");
-    }
+    validarPrecio(precio);
     precio_ = precio;
 }
 
 void Producto::setCategoria(std::string categoria) {
-    validarSinComas(categoria, "La categoria");
+    validarTexto(categoria, "La categoria", CATEGORIA_LONGITUD_MAXIMA);
     categoria_ = std::move(categoria);
 }
 
 void Producto::setStockMinimo(int stockMinimo) {
-    if (stockMinimo < 0) {
-        throw EntradaInvalida("El stock minimo no puede ser negativo.");
-    }
+    validarStock(stockMinimo, "El stock minimo");
     stockMinimo_ = stockMinimo;
 }
 
 void Producto::aumentarStock(int cantidad) {
     if (cantidad < 0) {
         throw EntradaInvalida("La cantidad a aumentar no puede ser negativa.");
+    }
+    // Suma con verificacion de desborde: si cantidad fuera enorme (por
+    // ejemplo, un valor cercano al maximo de un int), stock_ + cantidad
+    // podria desbordar un int ANTES de llegar a compararse con
+    // STOCK_MAXIMO -- y un desborde de enteros con signo es comportamiento
+    // indefinido en C++, no simplemente "da un numero raro". Se resta en
+    // vez de sumar para comparar: matematicamente equivalente a
+    // "stock_ + cantidad > STOCK_MAXIMO" pero sin poder desbordar, porque
+    // ambos operandos ya estan acotados a STOCK_MAXIMO por separado.
+    if (cantidad > Producto::STOCK_MAXIMO - stock_) {
+        throw EntradaInvalida("El stock resultante no puede superar " +
+                               std::to_string(Producto::STOCK_MAXIMO) + " unidades.");
     }
     stock_ += cantidad;
 }

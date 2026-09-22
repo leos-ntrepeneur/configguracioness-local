@@ -11,21 +11,34 @@ ProductoDialog::ProductoDialog(Modo modo, const Producto* existente, QWidget* pa
     : QDialog(padre), modo_(modo) {
     setWindowTitle(modo_ == Modo::Nuevo ? "Nuevo producto" : "Editar producto");
 
+    // Los rangos/longitudes vienen de Producto (Producto::STOCK_MAXIMO,
+    // etc.) en vez de numeros sueltos aqui: es la MISMA regla de negocio
+    // que ya valida Producto en su constructor, asi que si algun dia
+    // cambia, cambia en un solo lugar y consola+GUI quedan sincronizadas.
+    // Ademas de evitar que el usuario escriba datos invalidos, esto evita
+    // por completo que existan productos con mas stock del que el resto
+    // del programa (carrito de ventas, sumas de totales) esta preparado
+    // para manejar sin desbordar un entero -- ver el comentario en
+    // Producto.h.
     campoCodigo_ = new QLineEdit(this);
+    campoCodigo_->setMaxLength(Producto::CODIGO_LONGITUD_MAXIMA);
+
     campoNombre_ = new QLineEdit(this);
+    campoNombre_->setMaxLength(Producto::NOMBRE_LONGITUD_MAXIMA);
 
     campoPrecio_ = new QDoubleSpinBox(this);
-    campoPrecio_->setRange(0.0, 1'000'000.0);
+    campoPrecio_->setRange(0.0, Producto::PRECIO_MAXIMO);
     campoPrecio_->setDecimals(2);
     campoPrecio_->setPrefix("$ ");
 
     campoStock_ = new QSpinBox(this);
-    campoStock_->setRange(0, 1'000'000);
+    campoStock_->setRange(0, Producto::STOCK_MAXIMO);
 
     campoCategoria_ = new QLineEdit(this);
+    campoCategoria_->setMaxLength(Producto::CATEGORIA_LONGITUD_MAXIMA);
 
     campoStockMinimo_ = new QSpinBox(this);
-    campoStockMinimo_->setRange(0, 1'000'000);
+    campoStockMinimo_->setRange(0, Producto::STOCK_MAXIMO);
 
     if (existente != nullptr) {
         campoCodigo_->setText(QString::fromStdString(existente->getCodigo()));

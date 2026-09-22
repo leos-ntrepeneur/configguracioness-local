@@ -21,8 +21,25 @@
 
 class Producto {
 public:
+    // Limites de negocio, PUBLICOS a proposito: tanto el menu de consola
+    // (Menu.cpp) como los widgets de la GUI (ProductoDialog, PestanaVentas)
+    // los usan para configurar sus propios controles (setRange, setMaxLength)
+    // y para el limite de "cantidad" al vender. Que todos lean del MISMO
+    // lugar evita que console/GUI se desincronicen con limites distintos, y
+    // es ademas la defensa real contra un desbordamiento de enteros: al
+    // garantizar aqui que ningun Producto puede tener mas de STOCK_MAXIMO
+    // unidades, ninguna suma "cantidad en carrito + cantidad nueva" en
+    // ningun otro archivo puede acercarse jamas al limite de un int (ver
+    // Menu::agregarAlCarrito y PestanaVentas::alAgregarAlCarrito).
+    static constexpr double PRECIO_MAXIMO = 1'000'000.0;
+    static constexpr int STOCK_MAXIMO = 1'000'000;
+    static constexpr int CODIGO_LONGITUD_MAXIMA = 30;
+    static constexpr int NOMBRE_LONGITUD_MAXIMA = 100;
+    static constexpr int CATEGORIA_LONGITUD_MAXIMA = 50;
+
     // Constructor: valida los datos de entrada y lanza EntradaInvalida si
-    // algo esta mal (precio negativo, stock negativo, codigo/nombre vacios).
+    // algo esta mal (precio negativo/fuera de rango/no finito, stock
+    // negativo o excesivo, codigo/nombre vacios o con caracteres invalidos).
     Producto(std::string codigo,
              std::string nombre,
              double precio,
