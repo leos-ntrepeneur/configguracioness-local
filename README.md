@@ -6,14 +6,16 @@ Proyecto de portafolio orientado a mostrar buenas prácticas de C++ moderno:
 POO, separación en archivos `.h`/`.cpp` por clase, STL, `const` correctness
 y manejo de errores con excepciones.
 
-> **Estado actual:** Requisitos 1, 2 y 3 completos:
-> - Alta, edición y baja de productos, con alerta de stock bajo integrada
->   en el listado.
+> **Estado actual:** Requisitos 1, 2, 3 y 4 completos:
+> - Alta, edición y baja de productos.
 > - Registro de ventas con carrito (agregar/quitar productos, validación
 >   de stock disponible en tiempo real) que descuenta el inventario al
 >   confirmar.
 > - Búsqueda de productos por código exacto o por nombre (coincidencia
 >   parcial, sin distinguir mayúsculas/minúsculas).
+> - Alertas de stock bajo: se marcan en el listado y la búsqueda, tienen
+>   una vista dedicada ("Ver alertas de stock bajo") y se avisan al
+>   instante si una venta deja un producto por debajo de su mínimo.
 >
 > Los siguientes requisitos (reporte de ventas del día, persistencia en
 > archivo) se agregan de forma incremental.
@@ -134,8 +136,6 @@ cmake --build build
 
 ## Próximos pasos (roadmap del proyecto)
 
-4. Alertas de stock bajo — ya integradas en el listado y la búsqueda; se
-   ampliarán con una vista dedicada a solo los productos en ese estado.
 5. Reporte de ventas del día (total vendido, productos más vendidos,
    número de transacciones).
 6. Persistencia en archivo (CSV), dejando el diseño preparado para migrar

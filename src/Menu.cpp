@@ -64,6 +64,7 @@ void Menu::gestionarProductos() {
         std::cout << "3. Eliminar (baja) un producto\n";
         std::cout << "4. Listar productos\n";
         std::cout << "5. Buscar producto (por nombre o codigo)\n";
+        std::cout << "6. Ver alertas de stock bajo\n";
         std::cout << "0. Volver al menu principal\n";
         // Cada operacion se envuelve en try/catch: si Producto/Inventario
         // lanzan una excepcion de negocio, la atrapamos aqui, mostramos el
@@ -77,6 +78,7 @@ void Menu::gestionarProductos() {
                 case 3: alEliminarProducto(); break;
                 case 4: alListarProductos(); break;
                 case 5: alBuscarProducto(); break;
+                case 6: alVerAlertasStockBajo(); break;
                 case 0: volver = true; break;
                 default: std::cout << "Opcion no valida.\n";
             }
@@ -173,6 +175,16 @@ void Menu::alBuscarProducto() const {
         return;
     }
     mostrarTablaProductos(encontrados);
+}
+
+void Menu::alVerAlertasStockBajo() const {
+    std::vector<Producto> productos = inventario_.productosConStockBajo();
+    std::cout << "\n-- Alertas de stock bajo --\n";
+    if (productos.empty()) {
+        std::cout << "No hay productos con stock bajo. Todo en orden.\n";
+        return;
+    }
+    mostrarTablaProductos(productos);
 }
 
 void Menu::mostrarTablaProductos(const std::vector<Producto>& productos) const {
@@ -343,4 +355,16 @@ void Menu::confirmarVenta(const std::map<std::string, int>& carrito) {
                    << " = " << detalle.getSubtotal() << "\n";
     }
     std::cout << "Total: " << std::fixed << std::setprecision(2) << venta.getTotal() << "\n";
+
+    // Requisito 4: avisar de inmediato si esta venta dejo algun producto
+    // por debajo de su stock minimo, sin que el usuario tenga que ir a
+    // buscarlo despues en el listado.
+    for (const DetalleVenta& detalle : venta.getDetalles()) {
+        const Producto& actualizado = inventario_.buscarPorCodigo(detalle.getCodigoProducto());
+        if (actualizado.estaBajoStockMinimo()) {
+            std::cout << "AVISO: " << actualizado.getNombre() << " quedo con stock bajo ("
+                      << actualizado.getStock() << " unidades, minimo "
+                      << actualizado.getStockMinimo() << ").\n";
+        }
+    }
 }

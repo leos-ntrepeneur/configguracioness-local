@@ -37,6 +37,7 @@ private:
     void alEliminarProducto();
     void alListarProductos() const;
     void alBuscarProducto() const;
+    void alVerAlertasStockBajo() const;
 
     // Compartida por alListarProductos() y alBuscarProducto() para no
     // duplicar el formato de tabla en dos lugares.
