@@ -6,10 +6,15 @@ Proyecto de portafolio orientado a mostrar buenas prácticas de C++ moderno:
 POO, separación en archivos `.h`/`.cpp` por clase, STL, `const` correctness
 y manejo de errores con excepciones.
 
-> **Estado actual:** Requisito 1 completo (alta, edición y baja de
-> productos, con búsqueda/listado y alerta de stock bajo integradas en el
-> listado). Los siguientes requisitos (ventas, reportes, persistencia en
-> archivo) se agregan de forma incremental.
+> **Estado actual:** Requisitos 1 y 2 completos:
+> - Alta, edición y baja de productos, con alerta de stock bajo integrada
+>   en el listado.
+> - Registro de ventas con carrito (agregar/quitar productos, validación
+>   de stock disponible en tiempo real) que descuenta el inventario al
+>   confirmar.
+>
+> Los siguientes requisitos (búsqueda dedicada, reporte de ventas del día,
+> persistencia en archivo) se agregan de forma incremental.
 
 ## Estructura del proyecto
 
@@ -18,12 +23,18 @@ inventario-pos/
 ├── include/            # Declaraciones (.h) — el "contrato" de cada clase
 │   ├── Producto.h
 │   ├── Inventario.h
+│   ├── DetalleVenta.h
+│   ├── Venta.h
+│   ├── GestorVentas.h
 │   ├── Menu.h
 │   ├── Utilidades.h
 │   └── Excepciones.h
 ├── src/                # Implementaciones (.cpp) + punto de entrada
 │   ├── Producto.cpp
 │   ├── Inventario.cpp
+│   ├── DetalleVenta.cpp
+│   ├── Venta.cpp
+│   ├── GestorVentas.cpp
 │   ├── Menu.cpp
 │   ├── Utilidades.cpp
 │   └── main.cpp
@@ -40,8 +51,16 @@ inventario-pos/
   opcional y stock mínimo (para alertas). Valida sus propios datos.
 - **Inventario**: dueño de la colección de productos (`std::map` por
   código). Alta/edición/baja, búsquedas, listado y detección de stock bajo.
-- **Menu**: capa de presentación (menús de consola). No contiene lógica de
-  negocio, solo la invoca y maneja errores con `try/catch`.
+- **DetalleVenta**: una línea de venta (producto, cantidad, precio unitario
+  al momento de vender).
+- **Venta**: transacción cerrada e inmutable: fecha, lista de
+  `DetalleVenta` y total calculado.
+- **GestorVentas**: valida stock suficiente para TODO el pedido antes de
+  tocar el inventario, descuenta stock a través de `Inventario` y guarda
+  el historial de ventas.
+- **Menu**: capa de presentación (menús de consola, incluido el flujo de
+  carrito para registrar una venta). No contiene lógica de negocio, solo
+  la invoca y maneja errores con `try/catch`.
 - **Excepciones**: `ProductoNoEncontrado`, `CodigoDuplicado`,
   `StockInsuficiente`, `EntradaInvalida`, `FinDeEntrada` — errores de
   negocio como excepciones en vez de códigos de retorno.
@@ -113,8 +132,6 @@ cmake --build build
 
 ## Próximos pasos (roadmap del proyecto)
 
-2. Registro de ventas (selección de productos, cálculo de total, descuento
-   automático de inventario).
 3. Consulta de inventario (listar/buscar por nombre o código) — ya cubierto
    parcialmente por el listado de productos.
 4. Alertas de stock bajo — ya integradas en el listado; se ampliarán con

@@ -2,19 +2,21 @@
 #include "Excepciones.h"
 #include "Utilidades.h"
 
-#include <iostream>
 #include <iomanip>
+#include <iostream>
+#include <vector>
 
 using utilidades::confirmar;
 using utilidades::leerDouble;
 using utilidades::leerEntero;
 using utilidades::leerLinea;
 
-// Lista de inicializacion de miembros (": inventario_(inventario)"): es la
-// forma idiomatica de inicializar referencias y const en C++. No se puede
-// asignar una referencia dentro del cuerpo del constructor (a diferencia de
-// un campo normal), tiene que "amarrarse" a su objetivo en este punto.
-Menu::Menu(Inventario& inventario) : inventario_(inventario) {}
+// Lista de inicializacion de miembros: es la forma idiomatica de
+// inicializar referencias y const en C++. No se puede asignar una
+// referencia dentro del cuerpo del constructor (a diferencia de un campo
+// normal), tiene que "amarrarse" a su objetivo en este punto.
+Menu::Menu(Inventario& inventario, GestorVentas& gestorVentas)
+    : inventario_(inventario), gestorVentas_(gestorVentas) {}
 
 void Menu::ejecutar() {
     bool salir = false;
@@ -25,6 +27,9 @@ void Menu::ejecutar() {
             switch (opcion) {
                 case 1:
                     gestionarProductos();
+                    break;
+                case 2:
+                    registrarVenta();
                     break;
                 case 0:
                     salir = true;
@@ -46,6 +51,7 @@ void Menu::ejecutar() {
 void Menu::mostrarMenuPrincipal() const {
     std::cout << "\n=== Sistema de Inventario y Punto de Venta ===\n";
     std::cout << "1. Gestion de productos\n";
+    std::cout << "2. Registrar venta\n";
     std::cout << "0. Salir\n";
 }
 
@@ -161,4 +167,147 @@ void Menu::alListarProductos() const {
         }
         std::cout << "\n";
     }
+}
+
+// --- Registro de ventas ---
+//
+// El flujo es tipo "carrito de compras": el usuario va agregando productos
+// (validando stock disponible en cada paso) y al final confirma para que
+// GestorVentas cree la Venta real y descuente el inventario de una sola
+// vez. Nada se descuenta mientras se arma el carrito, asi que cancelar no
+// deja el inventario en un estado raro.
+
+void Menu::registrarVenta() {
+    // codigo -> cantidad acumulada. Vive solo durante este metodo: en
+    // cuanto termina (se confirma o se cancela), el carrito desaparece.
+    std::map<std::string, int> carrito;
+    bool salirCarrito = false;
+
+    while (!salirCarrito) {
+        mostrarCarrito(carrito);
+        std::cout << "\n--- Registrar venta ---\n";
+        std::cout << "1. Agregar producto\n";
+        std::cout << "2. Quitar producto\n";
+        std::cout << "3. Confirmar venta\n";
+        std::cout << "0. Cancelar y volver\n";
+
+        try {
+            int opcion = leerEntero("Selecciona una opcion: ");
+            switch (opcion) {
+                case 1:
+                    agregarAlCarrito(carrito);
+                    break;
+                case 2:
+                    quitarDelCarrito(carrito);
+                    break;
+                case 3:
+                    if (carrito.empty()) {
+                        std::cout << "El carrito esta vacio, agrega al menos un producto.\n";
+                    } else {
+                        confirmarVenta(carrito);
+                        salirCarrito = true;
+                    }
+                    break;
+                case 0:
+                    salirCarrito = true;
+                    std::cout << "Venta cancelada. No se modifico el inventario.\n";
+                    break;
+                default:
+                    std::cout << "Opcion no valida.\n";
+            }
+        } catch (const FinDeEntrada&) {
+            throw; // igual que en gestionarProductos: propaga hasta ejecutar().
+        } catch (const std::exception& e) {
+            std::cout << "Error: " << e.what() << "\n";
+        }
+    }
+}
+
+void Menu::mostrarCarrito(const std::map<std::string, int>& carrito) const {
+    if (carrito.empty()) {
+        std::cout << "\nCarrito vacio.\n";
+        return;
+    }
+
+    std::cout << "\n-- Carrito actual --\n";
+    double total = 0.0;
+    for (const auto& [codigo, cantidad] : carrito) {
+        try {
+            const Producto& producto = inventario_.buscarPorCodigo(codigo);
+            double subtotal = producto.getPrecio() * cantidad;
+            total += subtotal;
+            std::cout << "  " << codigo << " - " << producto.getNombre()
+                       << " x" << cantidad << " = "
+                       << std::fixed << std::setprecision(2) << subtotal << "\n";
+        } catch (const ProductoNoEncontrado&) {
+            // El producto se elimino del inventario mientras estaba en el
+            // carrito (en otra parte del menu). Lo avisamos en vez de
+            // tronar; confirmarVenta() volvera a fallar mas claro si el
+            // usuario intenta cerrar la venta con este producto todavia
+            // dentro.
+            std::cout << "  " << codigo << " x" << cantidad << " (producto ya no existe)\n";
+        }
+    }
+    std::cout << "  Total estimado: " << std::fixed << std::setprecision(2) << total << "\n";
+}
+
+void Menu::agregarAlCarrito(std::map<std::string, int>& carrito) {
+    std::string codigo = leerLinea("Codigo del producto: ");
+    const Producto& producto = inventario_.buscarPorCodigo(codigo); // lanza si no existe.
+
+    int cantidad = leerEntero("Cantidad: ");
+    if (cantidad <= 0) {
+        throw EntradaInvalida("La cantidad debe ser mayor a cero.");
+    }
+
+    // Si el producto ya estaba en el carrito, sumamos a lo que ya habia
+    // pedido, y validamos el TOTAL acumulado contra el stock real (el
+    // stock del inventario todavia no se ha tocado).
+    int yaEnCarrito = carrito.count(codigo) ? carrito.at(codigo) : 0;
+    int totalSolicitado = yaEnCarrito + cantidad;
+    if (totalSolicitado > producto.getStock()) {
+        throw StockInsuficiente(codigo, producto.getStock(), totalSolicitado);
+    }
+
+    carrito[codigo] = totalSolicitado;
+    std::cout << producto.getNombre() << " agregado al carrito (cantidad en carrito: "
+              << totalSolicitado << ").\n";
+}
+
+void Menu::quitarDelCarrito(std::map<std::string, int>& carrito) {
+    if (carrito.empty()) {
+        std::cout << "El carrito ya esta vacio.\n";
+        return;
+    }
+    std::string codigo = leerLinea("Codigo del producto a quitar: ");
+    auto it = carrito.find(codigo);
+    if (it == carrito.end()) {
+        std::cout << "Ese codigo no esta en el carrito.\n";
+        return;
+    }
+    carrito.erase(it);
+    std::cout << "Producto quitado del carrito.\n";
+}
+
+void Menu::confirmarVenta(const std::map<std::string, int>& carrito) {
+    // Construimos los DetalleVenta con el nombre/precio ACTUALES del
+    // producto (snapshot en el momento de vender). GestorVentas hace su
+    // propia validacion de stock antes de descontar nada.
+    std::vector<DetalleVenta> detalles;
+    detalles.reserve(carrito.size());
+    for (const auto& [codigo, cantidad] : carrito) {
+        const Producto& producto = inventario_.buscarPorCodigo(codigo);
+        detalles.emplace_back(codigo, producto.getNombre(), cantidad, producto.getPrecio());
+    }
+
+    const Venta& venta = gestorVentas_.registrarVenta(detalles);
+
+    std::cout << "\n=== Venta registrada ===\n";
+    std::cout << "Fecha: " << venta.fechaComoTexto() << "\n";
+    for (const DetalleVenta& detalle : venta.getDetalles()) {
+        std::cout << "  " << detalle.getNombreProducto() << " x" << detalle.getCantidad()
+                   << " @ " << std::fixed << std::setprecision(2) << detalle.getPrecioUnitario()
+                   << " = " << detalle.getSubtotal() << "\n";
+    }
+    std::cout << "Total: " << std::fixed << std::setprecision(2) << venta.getTotal() << "\n";
 }

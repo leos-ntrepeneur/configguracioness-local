@@ -1,22 +1,27 @@
 // Menu.h
 //
 // Capa de presentacion: solo imprime texto, lee opciones y llama a los
-// metodos de Inventario (y mas adelante GestorVentas). No valida reglas de
-// negocio aqui -- esas viven en Producto/Inventario y se manejan con
+// metodos de Inventario/GestorVentas. No valida reglas de negocio aqui --
+// esas viven en Producto/Inventario/GestorVentas y se manejan con
 // try/catch para que un error no tumbe el programa.
 
 #ifndef MENU_H
 #define MENU_H
 
+#include <map>
+#include <string>
+
+#include "GestorVentas.h"
 #include "Inventario.h"
 
 class Menu {
 public:
-    // Recibe una REFERENCIA a Inventario, no una copia: Menu no es dueno del
-    // inventario, solo lo usa. `&` es el operador de referencia de C++: un
-    // alias sin memoria propia hacia el objeto original (distinto de un
-    // puntero, que si ocupa su propia memoria y puede ser nulo).
-    explicit Menu(Inventario& inventario);
+    // Recibe REFERENCIAS a Inventario y GestorVentas, no copias: Menu no es
+    // dueno de ninguno de los dos, solo los usa. `&` es el operador de
+    // referencia de C++: un alias sin memoria propia hacia el objeto
+    // original (distinto de un puntero, que si ocupa su propia memoria y
+    // puede ser nulo).
+    Menu(Inventario& inventario, GestorVentas& gestorVentas);
 
     // Punto de entrada: corre el bucle principal hasta que el usuario
     // elige salir.
@@ -31,7 +36,18 @@ private:
     void alEliminarProducto();
     void alListarProductos() const;
 
+    // --- Registro de ventas ---
+    void registrarVenta();
+    // El "carrito" vive solo mientras se arma la venta: codigo -> cantidad
+    // acumulada. Se pasa por referencia para que las funciones auxiliares
+    // lo modifiquen sin necesidad de devolverlo y reasignarlo.
+    void mostrarCarrito(const std::map<std::string, int>& carrito) const;
+    void agregarAlCarrito(std::map<std::string, int>& carrito);
+    void quitarDelCarrito(std::map<std::string, int>& carrito);
+    void confirmarVenta(const std::map<std::string, int>& carrito);
+
     Inventario& inventario_;
+    GestorVentas& gestorVentas_;
 };
 
 #endif // MENU_H
