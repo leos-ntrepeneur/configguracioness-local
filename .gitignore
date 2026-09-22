@@ -1,0 +1,16 @@
+# Binarios de compilacion
+bin/
+build/
+*.o
+*.exe
+*.out
+
+# Archivos de datos generados en tiempo de ejecucion (se agregan en el
+# requisito de persistencia; el repo no debe versionar los datos del usuario)
+data/*.csv
+
+# Archivos de IDE / Visual Studio
+.vs/
+*.vcxproj.user
+out/
+CMakeUserPresets.json
