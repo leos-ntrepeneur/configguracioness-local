@@ -1,12 +1,23 @@
 # Inventario POS (C++)
 
-Sistema de consola en C++17 para control de inventario y punto de venta,
-pensado para un pequeño negocio (ferretería, abarrotes, refaccionaria).
-Proyecto de portafolio orientado a mostrar buenas prácticas de C++ moderno:
-POO, separación en archivos `.h`/`.cpp` por clase, STL, `const` correctness,
+Sistema en C++17 para control de inventario y punto de venta, pensado para
+un pequeño negocio (ferretería, abarrotes, refaccionaria). Proyecto de
+portafolio orientado a mostrar buenas prácticas de C++ moderno: POO,
+separación en archivos `.h`/`.cpp` por clase, STL, `const` correctness,
 manejo de errores con excepciones y persistencia detrás de una interfaz.
 
-> **Estado:** los 6 requisitos funcionales completos.
+**Tiene dos interfaces que comparten exactamente la misma lógica de
+negocio** (`Producto`, `Inventario`, `Venta`, `GestorVentas`, persistencia
+en CSV — ni una línea de esas clases sabe si el usuario está en una
+consola o una ventana):
+
+- **`inventario_pos`** — versión de consola (siempre se puede compilar,
+  no requiere nada más que un compilador de C++17).
+- **`inventario_pos_gui`** — versión gráfica con Qt Widgets (requiere
+  tener Qt6 instalado; si no lo tienes, CMake simplemente omite este
+  target y compila solo la consola).
+
+> **Estado:** los 6 requisitos funcionales completos, en ambas interfaces.
 > - Alta, edición y baja de productos (código, nombre, precio, stock,
 >   categoría opcional, stock mínimo).
 > - Registro de ventas con carrito (agregar/quitar productos, validación de
@@ -29,7 +40,7 @@ manejo de errores con excepciones y persistencia detrás de una interfaz.
 
 ```
 inventario-pos/
-├── include/                    # Declaraciones (.h) — el "contrato" de cada clase
+├── include/                    # NEGOCIO: declaraciones (.h) que usan las DOS interfaces
 │   ├── Producto.h
 │   ├── Inventario.h
 │   ├── DetalleVenta.h
@@ -40,10 +51,10 @@ inventario-pos/
 │   ├── RepositorioProductosCsv.h   # Implementacion CSV de la interfaz
 │   ├── RepositorioVentasCsv.h      # Implementacion CSV de la interfaz
 │   ├── CsvUtil.h                   # Parseo de lineas CSV (helper compartido)
-│   ├── Menu.h
-│   ├── Utilidades.h
+│   ├── Menu.h                      # Solo lo usa la consola
+│   ├── Utilidades.h                # Solo lo usa la consola
 │   └── Excepciones.h
-├── src/                         # Implementaciones (.cpp) + punto de entrada
+├── src/                         # Implementaciones (.cpp) de lo de arriba + main.cpp (consola)
 │   ├── Producto.cpp
 │   ├── Inventario.cpp
 │   ├── DetalleVenta.cpp
@@ -55,11 +66,21 @@ inventario-pos/
 │   ├── Menu.cpp
 │   ├── Utilidades.cpp
 │   └── main.cpp
+├── gui/                         # Interfaz grafica (Qt Widgets) -- SOLO presentacion,
+│   │                             # reutiliza include/src de arriba sin modificarlos
+│   ├── include/
+│   │   ├── MainWindow.h            # Ventana principal (dueña de Inventario/GestorVentas/repos)
+│   │   ├── PestanaProductos.h      # Pestaña "Productos": tabla + alta/edicion/baja
+│   │   ├── PestanaVentas.h         # Pestaña "Vender": productos disponibles + carrito
+│   │   ├── PestanaReporte.h        # Pestaña "Reporte del dia"
+│   │   └── ProductoDialog.h        # Formulario emergente de alta/edicion
+│   └── src/                        # Implementaciones .cpp + main_gui.cpp
 ├── data/                        # Datos persistidos (productos.csv, ventas.csv);
 │                                 # se generan solos al usar el programa, no se
 │                                 # versionan en git (ver .gitignore)
-├── CMakeLists.txt               # Build con CMake (recomendado para Visual Studio)
-├── Makefile                     # Build directo con g++ (MinGW en Windows)
+├── CMakeLists.txt               # Build con CMake: genera inventario_pos siempre,
+│                                 # e inventario_pos_gui si detecta Qt6 instalado
+├── Makefile                     # Build directo con g++ de SOLO la consola (MinGW en Windows)
 └── README.md
 ```
 
@@ -91,6 +112,24 @@ inventario-pos/
   negocio como excepciones en vez de códigos de retorno.
 - **Utilidades / CsvUtil**: lectura segura de consola y parseo de líneas
   CSV, respectivamente.
+
+### Clases de la interfaz gráfica (`gui/`)
+
+- **MainWindow**: cumple el mismo papel que `main.cpp` + `Menu` en la
+  consola — es dueña de `Inventario`, `GestorVentas` y los repositorios,
+  arma las 3 pestañas y conecta sus señales (`datosModificados()`) para
+  guardar en disco y refrescar automáticamente.
+- **PestanaProductos**: tabla de productos + búsqueda + botones
+  Nuevo/Editar/Eliminar, con las filas de stock bajo resaltadas.
+- **PestanaVentas**: productos disponibles a la izquierda, carrito a la
+  derecha (mismo diseño que el flujo de consola, pero con clics).
+- **PestanaReporte**: totales y ranking de productos más vendidos del día.
+- **ProductoDialog**: formulario emergente reutilizado tanto para alta
+  como para edición.
+
+Cada pestaña reutiliza `Inventario`/`GestorVentas`/las excepciones de
+negocio tal cual, sin ninguna clase nueva de lógica — la única diferencia
+con la consola es cómo se piden/muestran los datos.
 
 ### Persistencia: cómo funciona
 
@@ -174,6 +213,55 @@ cmake -S . -B build
 cmake --build build
 ./build/inventario_pos
 ```
+
+## Cómo compilar y ejecutar la versión gráfica (Windows)
+
+La versión gráfica necesita Qt6 instalado. La ruta más confiable es usar
+**Qt Creator** (el IDE oficial de Qt) en vez de pelear con la integración
+de CMake de Visual Studio.
+
+### 1. Instala Qt
+
+1. Ve a [qt.io/download-qt-installer](https://www.qt.io/download-qt-installer-oss)
+   y descarga el **Qt Online Installer** (necesitas crear una cuenta
+   gratuita de Qt, es solo un formulario).
+2. Al ejecutarlo, en la pantalla de selección de componentes marca:
+   - Bajo tu versión de Qt (ej. **Qt 6.8.x**) → **MinGW 64-bit** (el
+     compilador viene empaquetado junto con Qt, ya calibrado para
+     funcionar entre sí — no hace falta usar el MinGW de MSYS2 aquí).
+   - **Qt Creator** normalmente ya viene marcado por defecto bajo
+     "Developer and Designer Tools".
+3. Instala (va a tardar, son varios GB).
+
+### 2. Abre el proyecto en Qt Creator
+
+1. Abre Qt Creator → **Archivo → Abrir archivo o proyecto...**
+2. Selecciona el `CMakeLists.txt` en la raíz de la carpeta del proyecto.
+3. Qt Creator va a detectar automáticamente un "Kit" (la combinación de
+   compilador + Qt que acabas de instalar) y configurar el proyecto. Dale
+   **Configurar proyecto**.
+
+### 3. Ejecuta
+
+1. Abajo a la izquierda, en el selector de "target" activo, elige
+   **`inventario_pos_gui`** (no `inventario_pos`, ese es la consola).
+2. Presiona el botón verde ▷ (o `Ctrl+R`).
+
+Se abre la ventana con las 3 pestañas (Productos / Vender / Reporte del
+día). Los datos se guardan igual que en consola, en `data/productos.csv`
+y `data/ventas.csv` junto al ejecutable.
+
+### Alternativa: Visual Studio
+
+También puedes abrir la carpeta del proyecto en Visual Studio (como con
+la consola) y seleccionar `inventario_pos_gui.exe` en el desplegable de
+elemento de inicio — pero Visual Studio necesita saber dónde quedó
+instalado Qt (variable `CMAKE_PREFIX_PATH` apuntando a la carpeta
+`.../Qt/6.8.x/mingw_64/lib/cmake`, configurable en el archivo
+`CMakePresets.json` o en la configuración de CMake de VS). Si tuviste
+problemas para que Visual Studio detectara CMake correctamente (ver el
+historial de este proyecto), **Qt Creator es el camino recomendado** — es
+el IDE que Qt mantiene específicamente para que esto funcione sin fricción.
 
 ## Ideas para seguir extendiendo el proyecto
 
