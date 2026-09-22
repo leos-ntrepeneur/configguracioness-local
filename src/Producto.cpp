@@ -1,6 +1,21 @@
 #include "Producto.h"
 #include "Excepciones.h"
 
+namespace {
+
+// El inventario se persiste en CSV (ver RepositorioProductosCsv), donde la
+// coma es el separador de campos. Si un nombre/categoria pudiera contener
+// una coma, romperia el formato del archivo al guardar. En vez de
+// implementar comillas/escapado (como hace un CSV "de verdad"), optamos
+// por la solucion mas simple para un negocio pequeno: no permitirlas.
+void validarSinComas(const std::string& valor, const std::string& nombreCampo) {
+    if (valor.find(',') != std::string::npos) {
+        throw EntradaInvalida(nombreCampo + " no puede contener comas.");
+    }
+}
+
+} // namespace
+
 // `std::move` mueve el contenido de un std::string en vez de copiarlo.
 // Como los parametros del constructor se reciben por valor (std::string
 // codigo, no const std::string&), ya tenemos una copia propia; moverla al
@@ -24,6 +39,9 @@ Producto::Producto(std::string codigo,
     if (nombre_.empty()) {
         throw EntradaInvalida("El nombre del producto no puede estar vacio.");
     }
+    validarSinComas(codigo_, "El codigo");
+    validarSinComas(nombre_, "El nombre");
+    validarSinComas(categoria_, "La categoria");
     if (precio_ < 0.0) {
         throw EntradaInvalida("El precio no puede ser negativo.");
     }
@@ -46,6 +64,7 @@ void Producto::setNombre(std::string nombre) {
     if (nombre.empty()) {
         throw EntradaInvalida("El nombre del producto no puede estar vacio.");
     }
+    validarSinComas(nombre, "El nombre");
     nombre_ = std::move(nombre);
 }
 
@@ -57,6 +76,7 @@ void Producto::setPrecio(double precio) {
 }
 
 void Producto::setCategoria(std::string categoria) {
+    validarSinComas(categoria, "La categoria");
     categoria_ = std::move(categoria);
 }
 

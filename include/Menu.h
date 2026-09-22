@@ -13,16 +13,27 @@
 #include <vector>
 
 #include "GestorVentas.h"
+#include "IRepositorioProductos.h"
+#include "IRepositorioVentas.h"
 #include "Inventario.h"
 
 class Menu {
 public:
-    // Recibe REFERENCIAS a Inventario y GestorVentas, no copias: Menu no es
-    // dueno de ninguno de los dos, solo los usa. `&` es el operador de
-    // referencia de C++: un alias sin memoria propia hacia el objeto
-    // original (distinto de un puntero, que si ocupa su propia memoria y
-    // puede ser nulo).
-    Menu(Inventario& inventario, GestorVentas& gestorVentas);
+    // Recibe REFERENCIAS a Inventario/GestorVentas/repositorios, no copias
+    // ni punteros: Menu no es dueno de ninguno, solo los usa. `&` es el
+    // operador de referencia de C++: un alias sin memoria propia hacia el
+    // objeto original (distinto de un puntero, que si ocupa su propia
+    // memoria y puede ser nulo).
+    //
+    // Notese que los parametros son IRepositorioProductos&/IRepositorioVentas&
+    // (la INTERFAZ), no RepositorioProductosCsv&/RepositorioVentasCsv&
+    // (la implementacion concreta). Esto es "programar contra una
+    // interfaz": Menu puede guardar/cargar datos sin saber ni importarle
+    // si por debajo es un CSV o, mas adelante, una base SQLite.
+    Menu(Inventario& inventario,
+         GestorVentas& gestorVentas,
+         IRepositorioProductos& repositorioProductos,
+         IRepositorioVentas& repositorioVentas);
 
     // Punto de entrada: corre el bucle principal hasta que el usuario
     // elige salir.
@@ -55,8 +66,16 @@ private:
     void quitarDelCarrito(std::map<std::string, int>& carrito);
     void confirmarVenta(const std::map<std::string, int>& carrito);
 
+    // --- Persistencia (Requisito 6) ---
+    // Se llama despues de cada alta/edicion/baja/venta exitosa, para que
+    // una salida inesperada (cerrar la ventana, un corte de luz) pierda
+    // como maximo la operacion en curso, no todo el historial previo.
+    void guardarDatos() const;
+
     Inventario& inventario_;
     GestorVentas& gestorVentas_;
+    IRepositorioProductos& repositorioProductos_;
+    IRepositorioVentas& repositorioVentas_;
 };
 
 #endif // MENU_H

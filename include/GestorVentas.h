@@ -54,6 +54,13 @@ public:
     // ranking de productos mas vendidos.
     ReporteVentasDia generarReporteDelDia() const;
 
+    // Reemplaza el historial completo con lo leido de persistencia al
+    // iniciar el programa. A diferencia de registrarVenta(), NO valida ni
+    // descuenta stock: el stock que se cargo en Inventario ya es el
+    // resultado neto de estas ventas pasadas, asi que volver a descontarlo
+    // aqui las contaria dos veces.
+    void cargarVentas(std::vector<Venta> ventas);
+
 private:
     Inventario& inventario_;
     std::vector<Venta> ventas_;

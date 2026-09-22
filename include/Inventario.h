@@ -61,6 +61,14 @@ public:
 
     std::size_t cantidadProductos() const;
 
+    // Reemplaza TODO el inventario con lo leido de persistencia al iniciar
+    // el programa (Requisito 6). A diferencia de agregarProducto(), no
+    // lanza CodigoDuplicado: si el archivo tuviera un codigo repetido (no
+    // deberia, pero un archivo se puede editar a mano), el ultimo que
+    // aparece simplemente reemplaza al anterior en vez de tronar el
+    // arranque del programa.
+    void cargarProductos(std::vector<Producto> productos);
+
 private:
     // La clave es el codigo del producto: evita buscarlo manualmente y hace
     // que "existe codigo duplicado" sea una operacion trivial (map.count).

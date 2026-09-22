@@ -102,3 +102,15 @@ void Inventario::descontarStock(const std::string& codigo, int cantidad) {
 std::size_t Inventario::cantidadProductos() const {
     return productos_.size();
 }
+
+void Inventario::cargarProductos(std::vector<Producto> productos) {
+    productos_.clear();
+    for (Producto& p : productos) {
+        std::string codigo = p.getCodigo();
+        // insert_or_assign (C++17): inserta si la clave no existe,
+        // reemplaza el valor si ya existia. Evita tener que hacer el
+        // find()-luego-insert()/erase() manual que hariamos en C++
+        // anteriores para lograr el mismo "upsert".
+        productos_.insert_or_assign(std::move(codigo), std::move(p));
+    }
+}

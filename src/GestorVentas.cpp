@@ -90,3 +90,7 @@ ReporteVentasDia GestorVentas::generarReporteDelDia() const {
 
     return reporte;
 }
+
+void GestorVentas::cargarVentas(std::vector<Venta> ventas) {
+    ventas_ = std::move(ventas);
+}

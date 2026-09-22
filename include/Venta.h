@@ -23,8 +23,15 @@
 class Venta {
 public:
     // Recibe los detalles ya armados (y validados) por quien la crea
-    // (GestorVentas). La fecha se toma automaticamente al construir.
+    // (GestorVentas). La fecha se toma automaticamente al construir: es el
+    // camino normal para una venta que esta ocurriendo AHORA.
     explicit Venta(std::vector<DetalleVenta> detalles);
+
+    // Igual, pero fijando la fecha manualmente. Solo lo usa
+    // RepositorioVentasCsv al reconstruir el historial desde archivo: ahi
+    // la venta ya ocurrio en el pasado y hay que respetar su fecha
+    // original, no ponerle la hora actual.
+    Venta(std::vector<DetalleVenta> detalles, std::chrono::system_clock::time_point fecha);
 
     const std::vector<DetalleVenta>& getDetalles() const;
     double getTotal() const;

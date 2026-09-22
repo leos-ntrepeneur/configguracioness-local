@@ -5,10 +5,18 @@
 #include <iomanip>
 #include <sstream>
 
+// Constructor delegante (C++11): en vez de repetir la logica de validacion
+// y calculo de total, este constructor simplemente le pasa la fecha actual
+// al otro constructor y deja que el haga todo el trabajo. En C++ anterior
+// a 2011 (o en C) esto se resolvia con un metodo privado "inicializar()"
+// llamado desde ambos constructores; delegar es mas directo.
 Venta::Venta(std::vector<DetalleVenta> detalles)
+    : Venta(std::move(detalles), std::chrono::system_clock::now()) {}
+
+Venta::Venta(std::vector<DetalleVenta> detalles, std::chrono::system_clock::time_point fecha)
     : detalles_(std::move(detalles)),
       total_(0.0),
-      fecha_(std::chrono::system_clock::now()) {
+      fecha_(fecha) {
     if (detalles_.empty()) {
         throw EntradaInvalida("Una venta debe tener al menos un producto.");
     }

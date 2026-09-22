@@ -15,8 +15,14 @@ using utilidades::leerLinea;
 // inicializar referencias y const en C++. No se puede asignar una
 // referencia dentro del cuerpo del constructor (a diferencia de un campo
 // normal), tiene que "amarrarse" a su objetivo en este punto.
-Menu::Menu(Inventario& inventario, GestorVentas& gestorVentas)
-    : inventario_(inventario), gestorVentas_(gestorVentas) {}
+Menu::Menu(Inventario& inventario,
+           GestorVentas& gestorVentas,
+           IRepositorioProductos& repositorioProductos,
+           IRepositorioVentas& repositorioVentas)
+    : inventario_(inventario),
+      gestorVentas_(gestorVentas),
+      repositorioProductos_(repositorioProductos),
+      repositorioVentas_(repositorioVentas) {}
 
 void Menu::ejecutar() {
     bool salir = false;
@@ -112,6 +118,7 @@ void Menu::alDarAltaProducto() {
     Producto nuevo(codigo, nombre, precio, stock, categoria, stockMinimo);
     inventario_.agregarProducto(nuevo);
     std::cout << "Producto agregado correctamente.\n";
+    guardarDatos();
 }
 
 void Menu::alEditarProducto() {
@@ -134,6 +141,7 @@ void Menu::alEditarProducto() {
 
     inventario_.editarProducto(codigo, nombre, precio, categoria, stockMinimo);
     std::cout << "Producto actualizado correctamente.\n";
+    guardarDatos();
 }
 
 void Menu::alEliminarProducto() {
@@ -144,6 +152,7 @@ void Menu::alEliminarProducto() {
     if (confirmar("Confirmas la eliminacion?")) {
         inventario_.eliminarProducto(codigo);
         std::cout << "Producto eliminado.\n";
+        guardarDatos();
     } else {
         std::cout << "Operacion cancelada.\n";
     }
@@ -399,5 +408,20 @@ void Menu::confirmarVenta(const std::map<std::string, int>& carrito) {
                       << actualizado.getStock() << " unidades, minimo "
                       << actualizado.getStockMinimo() << ").\n";
         }
+    }
+
+    guardarDatos();
+}
+
+void Menu::guardarDatos() const {
+    // Un fallo al guardar (disco lleno, sin permisos de escritura) no debe
+    // tumbar el programa ni hacer que el usuario pierda lo que ya hizo en
+    // memoria: se avisa y se sigue. Los datos se intentaran guardar de
+    // nuevo en la siguiente operacion.
+    try {
+        repositorioProductos_.guardarTodos(inventario_.listarTodos());
+        repositorioVentas_.guardarTodas(gestorVentas_.listarVentas());
+    } catch (const std::exception& e) {
+        std::cout << "Aviso: no se pudieron guardar los datos en disco (" << e.what() << ").\n";
     }
 }
