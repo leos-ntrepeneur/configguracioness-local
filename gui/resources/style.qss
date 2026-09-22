@@ -162,16 +162,30 @@ QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
     border: 1px solid #5865f2;
 }
 
+/* Campo deshabilitado (ej. "Codigo" y "Stock" al editar un producto):
+ * mas oscuro y con texto tenue, para que sea obvio de un vistazo que no
+ * se puede tocar. La QPalette (ver TemaOscuro.cpp) ya deja el texto en un
+ * gris apagado; aqui reforzamos tambien fondo y borde porque el QSS de
+ * arriba (QLineEdit, QSpinBox...) especifica su propio background-color,
+ * que si no se pisa explicitamente aqui, GANA por encima de la paleta.
+ */
+QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled {
+    background-color: #26272b;
+    color: #6a6e78;
+    border-color: #313338;
+}
+
 QLineEdit::placeholder {
     color: #6a6e78;
 }
 
-QSpinBox::up-button, QSpinBox::down-button,
-QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
-    width: 16px;
-    border: none;
-    background-color: transparent;
-}
+/* OJO: aqui NO se estiliza QSpinBox::up-button/down-button. En QSS, en
+ * cuanto una regla toca el subcontrol de un boton de flecha, Qt deja de
+ * dibujar el glifo nativo (la flechita) y hay que proveerlo a mano con
+ * ::up-arrow/::down-arrow (tipicamente una imagen). Es mas simple dejar
+ * que el estilo Fusion las dibuje de forma nativa -- ya se ven bien
+ * porque respetan la QPalette oscura que configuramos en
+ * TemaOscuro.cpp (rol ButtonText). */
 
 /* ---------- Tablas ---------- */
 QTableWidget {

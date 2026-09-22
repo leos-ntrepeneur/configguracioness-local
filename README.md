@@ -73,8 +73,12 @@ inventario-pos/
 │   │   ├── PestanaProductos.h      # Pestaña "Productos": tabla + alta/edicion/baja
 │   │   ├── PestanaVentas.h         # Pestaña "Vender": productos disponibles + carrito
 │   │   ├── PestanaReporte.h        # Pestaña "Reporte del dia"
-│   │   └── ProductoDialog.h        # Formulario emergente de alta/edicion
-│   └── src/                        # Implementaciones .cpp + main_gui.cpp
+│   │   ├── ProductoDialog.h        # Formulario emergente de alta/edicion
+│   │   └── TemaOscuro.h            # Aplica paleta + hoja de estilo oscura
+│   ├── src/                        # Implementaciones .cpp + main_gui.cpp
+│   └── resources/
+│       ├── style.qss               # Hoja de estilo (QSS) del tema oscuro
+│       └── resources.qrc           # Empaqueta style.qss dentro del .exe
 ├── data/                        # Datos persistidos (productos.csv, ventas.csv);
 │                                 # se generan solos al usar el programa, no se
 │                                 # versionan en git (ver .gitignore)
@@ -126,6 +130,12 @@ inventario-pos/
 - **PestanaReporte**: totales y ranking de productos más vendidos del día.
 - **ProductoDialog**: formulario emergente reutilizado tanto para alta
   como para edición.
+- **TemaOscuro**: aplica el tema oscuro completo en un solo lugar —
+  combina una `QPalette` oscura (para lo que Qt dibuja "a mano", como las
+  flechitas de un spinbox o el atenuado de campos deshabilitados) con la
+  hoja de estilo `style.qss` (para todo lo demás: colores, bordes,
+  esquinas redondeadas). Ver el comentario en `TemaOscuro.h` para el
+  porqué de necesitar ambos mecanismos.
 
 Cada pestaña reutiliza `Inventario`/`GestorVentas`/las excepciones de
 negocio tal cual, sin ninguna clase nueva de lógica — la única diferencia
