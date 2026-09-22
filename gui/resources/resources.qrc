@@ -1,0 +1,14 @@
+<!--
+resources.qrc — El "sistema de recursos" de Qt empaqueta archivos (aqui,
+la hoja de estilo) DENTRO del propio ejecutable en tiempo de compilacion,
+en vez de dejarlos como archivos sueltos que hay que repartir junto al
+.exe. CMake lo procesa automaticamente (AUTORCC) generando un objeto
+compilado a partir de este XML; el resultado se referencia en el codigo
+con la ruta virtual ":/style.qss" (el prefijo "qrc" que le dimos abajo),
+nunca con una ruta de disco real.
+-->
+<RCC>
+    <qresource prefix="/">
+        <file>style.qss</file>
+    </qresource>
+</RCC>

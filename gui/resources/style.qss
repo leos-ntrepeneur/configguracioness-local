@@ -1,0 +1,269 @@
+/* style.qss — tema oscuro moderno para Inventario POS.
+ *
+ * QSS (Qt Style Sheets) es el equivalente de Qt a CSS: selecciona widgets
+ * por tipo (QPushButton { ... }), por nombre de objeto (#botonPrimario),
+ * o por "pseudo-estado" (:hover, :pressed, :focus, :disabled). Se carga
+ * una sola vez en main_gui.cpp con qApp->setStyleSheet(...) y Qt la aplica
+ * en cascada a TODA la aplicacion (ventanas, dialogos, QMessageBox
+ * incluidos), sin tener que tocar el codigo C++ de cada widget.
+ *
+ * Paleta (para no repetir valores a mano, se documentan aqui; QSS no
+ * soporta variables como CSS moderno, cada color se repite donde se usa):
+ *   Fondo principal   #1e1f22
+ *   Superficie/panel   #2b2d31
+ *   Superficie alterna #313338  (filas alternas, hover)
+ *   Borde              #3f4147
+ *   Texto principal    #e3e5e8
+ *   Texto secundario   #949ba4
+ *   Acento (primario)  #5865f2 / hover #4752c4 / presionado #3c45a5
+ *   Peligro            #ed4245 / hover #c62a2d
+ */
+
+/* ---------- Base ---------- */
+QWidget {
+    background-color: #1e1f22;
+    color: #e3e5e8;
+    font-size: 13px;
+}
+
+QMainWindow, QDialog {
+    background-color: #1e1f22;
+}
+
+QLabel {
+    background: transparent;
+}
+
+/* Texto secundario (subtitulos, ayudas) -- se asigna con
+ * etiqueta->setProperty("clase", "secundario") desde C++. */
+QLabel[clase="secundario"] {
+    color: #949ba4;
+}
+
+/* Titulo de seccion dentro de una pestaña (ej. "Carrito",
+ * "Productos disponibles"). */
+QLabel[clase="titulo"] {
+    color: #e3e5e8;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+/* ---------- Pestañas (QTabWidget) ---------- */
+QTabWidget::pane {
+    border: 1px solid #3f4147;
+    border-radius: 6px;
+    top: -1px;
+    background-color: #2b2d31;
+}
+
+QTabBar::tab {
+    background-color: transparent;
+    color: #949ba4;
+    padding: 8px 18px;
+    margin-right: 2px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-weight: 600;
+}
+
+QTabBar::tab:hover {
+    color: #e3e5e8;
+}
+
+QTabBar::tab:selected {
+    color: #e3e5e8;
+    border-bottom: 2px solid #5865f2;
+}
+
+/* ---------- Botones ---------- */
+QPushButton {
+    background-color: #313338;
+    color: #e3e5e8;
+    border: 1px solid #3f4147;
+    border-radius: 6px;
+    padding: 7px 16px;
+    font-weight: 600;
+}
+
+QPushButton:hover {
+    background-color: #3a3c42;
+    border-color: #4a4d54;
+}
+
+QPushButton:pressed {
+    background-color: #26272b;
+}
+
+QPushButton:disabled {
+    color: #5c5f66;
+    background-color: #26272b;
+    border-color: #313338;
+}
+
+/* Boton "por defecto" del dialogo (el que dispara Enter, normalmente
+ * "Aceptar" en QDialogButtonBox): se pinta con el color de acento para
+ * que sea obvio cual es la accion principal. */
+QPushButton:default {
+    background-color: #5865f2;
+    border-color: #5865f2;
+    color: #ffffff;
+}
+
+QPushButton:default:hover {
+    background-color: #4752c4;
+}
+
+QPushButton:default:pressed {
+    background-color: #3c45a5;
+}
+
+/* Botones marcados desde C++ con setProperty("clase", "primario"/"peligro"). */
+QPushButton[clase="primario"] {
+    background-color: #5865f2;
+    border-color: #5865f2;
+    color: #ffffff;
+}
+
+QPushButton[clase="primario"]:hover {
+    background-color: #4752c4;
+}
+
+QPushButton[clase="primario"]:pressed {
+    background-color: #3c45a5;
+}
+
+QPushButton[clase="peligro"] {
+    background-color: transparent;
+    border-color: #ed4245;
+    color: #ed4245;
+}
+
+QPushButton[clase="peligro"]:hover {
+    background-color: #ed4245;
+    color: #ffffff;
+}
+
+QPushButton[clase="peligro"]:pressed {
+    background-color: #c62a2d;
+    border-color: #c62a2d;
+}
+
+/* ---------- Campos de entrada ---------- */
+QLineEdit, QSpinBox, QDoubleSpinBox {
+    background-color: #313338;
+    color: #e3e5e8;
+    border: 1px solid #3f4147;
+    border-radius: 6px;
+    padding: 6px 8px;
+    selection-background-color: #5865f2;
+}
+
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+    border: 1px solid #5865f2;
+}
+
+QLineEdit::placeholder {
+    color: #6a6e78;
+}
+
+QSpinBox::up-button, QSpinBox::down-button,
+QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
+    width: 16px;
+    border: none;
+    background-color: transparent;
+}
+
+/* ---------- Tablas ---------- */
+QTableWidget {
+    background-color: #2b2d31;
+    alternate-background-color: #313338;
+    gridline-color: #3f4147;
+    border: 1px solid #3f4147;
+    border-radius: 6px;
+    selection-background-color: #5865f2;
+    selection-color: #ffffff;
+}
+
+QTableWidget::item {
+    padding: 4px 6px;
+    color: #e3e5e8;
+}
+
+QTableWidget::item:selected {
+    color: #ffffff;
+}
+
+QHeaderView::section {
+    background-color: #232428;
+    color: #949ba4;
+    padding: 6px;
+    border: none;
+    border-bottom: 1px solid #3f4147;
+    font-weight: 600;
+}
+
+/* ---------- Splitter (divisor arrastrable en la pestaña Vender) ---------- */
+QSplitter::handle {
+    background-color: #3f4147;
+    width: 2px;
+}
+
+/* ---------- Barra de estado ---------- */
+QStatusBar {
+    background-color: #232428;
+    color: #949ba4;
+    border-top: 1px solid #3f4147;
+}
+
+/* ---------- Cuadros de dialogo estandar (QMessageBox, QInputDialog) ---------- */
+QMessageBox, QInputDialog {
+    background-color: #2b2d31;
+}
+
+/* ---------- Scrollbars (mas delgados y planos que el estilo por defecto) ---------- */
+QScrollBar:vertical {
+    background: #1e1f22;
+    width: 12px;
+    margin: 0;
+}
+
+QScrollBar::handle:vertical {
+    background: #4a4d54;
+    min-height: 24px;
+    border-radius: 5px;
+    margin: 2px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #5c5f66;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+QScrollBar:horizontal {
+    background: #1e1f22;
+    height: 12px;
+    margin: 0;
+}
+
+QScrollBar::handle:horizontal {
+    background: #4a4d54;
+    min-width: 24px;
+    border-radius: 5px;
+    margin: 2px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: #5c5f66;
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0;
+}
+
+/* ---------- QDialogButtonBox ---------- */
+QDialogButtonBox {
+    background: transparent;
+}

@@ -52,10 +52,13 @@ if(Qt6_FOUND)
     # AUTOMOC debe activarse ANTES de add_executable: CMake lee esta
     # variable en ese momento para decidir si el target necesita el paso
     # extra de `moc` (la herramienta de Qt que genera el codigo C++ real
-    # detras de señales/slots, a partir de la macro Q_OBJECT).
+    # detras de señales/slots, a partir de la macro Q_OBJECT). AUTORCC hace
+    # lo mismo para los archivos .qrc: los compila a codigo C++ que
+    # empaqueta el contenido de style.qss dentro del propio ejecutable.
     set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTORCC ON)
 
-    add_executable(inventario_pos_gui ${CORE_SOURCES} ${GUI_SOURCES} ${GUI_HEADERS})
+    add_executable(inventario_pos_gui ${CORE_SOURCES} ${GUI_SOURCES} ${GUI_HEADERS} gui/resources/resources.qrc)
     target_include_directories(inventario_pos_gui PRIVATE include gui/include)
     target_link_libraries(inventario_pos_gui PRIVATE Qt6::Widgets)
 

@@ -37,14 +37,21 @@ PestanaVentas::PestanaVentas(Inventario& inventario, GestorVentas& gestorVentas,
     tablaProductos_->setEditTriggers(QTableWidget::NoEditTriggers);
     tablaProductos_->setSelectionBehavior(QTableWidget::SelectRows);
     tablaProductos_->setSelectionMode(QTableWidget::SingleSelection);
-    tablaProductos_->horizontalHeader()->setStretchLastSection(true);
     tablaProductos_->verticalHeader()->setVisible(false);
+    tablaProductos_->setAlternatingRowColors(true);
+    tablaProductos_->horizontalHeader()->setSectionResizeMode(COL_PROD_CODIGO, QHeaderView::ResizeToContents);
+    tablaProductos_->horizontalHeader()->setSectionResizeMode(COL_PROD_NOMBRE, QHeaderView::Stretch);
+    tablaProductos_->horizontalHeader()->setSectionResizeMode(COL_PROD_PRECIO, QHeaderView::ResizeToContents);
+    tablaProductos_->horizontalHeader()->setSectionResizeMode(COL_PROD_STOCK, QHeaderView::ResizeToContents);
 
     botonAgregar_ = new QPushButton("Agregar al carrito ->", this);
 
     auto* panelIzquierdo = new QWidget(this);
+    auto* tituloProductos = new QLabel("Productos disponibles", panelIzquierdo);
+    tituloProductos->setProperty("clase", "titulo");
+
     auto* layoutIzquierdo = new QVBoxLayout(panelIzquierdo);
-    layoutIzquierdo->addWidget(new QLabel("Productos disponibles", panelIzquierdo));
+    layoutIzquierdo->addWidget(tituloProductos);
     layoutIzquierdo->addWidget(campoBusqueda_);
     layoutIzquierdo->addWidget(tablaProductos_);
     layoutIzquierdo->addWidget(botonAgregar_);
@@ -56,17 +63,28 @@ PestanaVentas::PestanaVentas(Inventario& inventario, GestorVentas& gestorVentas,
     tablaCarrito_->setEditTriggers(QTableWidget::NoEditTriggers);
     tablaCarrito_->setSelectionBehavior(QTableWidget::SelectRows);
     tablaCarrito_->setSelectionMode(QTableWidget::SingleSelection);
-    tablaCarrito_->horizontalHeader()->setStretchLastSection(true);
     tablaCarrito_->verticalHeader()->setVisible(false);
+    tablaCarrito_->setAlternatingRowColors(true);
+    tablaCarrito_->horizontalHeader()->setSectionResizeMode(COL_CARR_CODIGO, QHeaderView::ResizeToContents);
+    tablaCarrito_->horizontalHeader()->setSectionResizeMode(COL_CARR_NOMBRE, QHeaderView::Stretch);
+    tablaCarrito_->horizontalHeader()->setSectionResizeMode(COL_CARR_CANTIDAD, QHeaderView::ResizeToContents);
+    tablaCarrito_->horizontalHeader()->setSectionResizeMode(COL_CARR_SUBTOTAL, QHeaderView::ResizeToContents);
 
     botonQuitar_ = new QPushButton("<- Quitar del carrito", this);
+    botonQuitar_->setProperty("clase", "peligro");
     etiquetaTotal_ = new QLabel("Total: $0.00", this);
-    etiquetaTotal_->setStyleSheet("font-weight: bold; font-size: 14px;");
+    // Color de acento para que el total salte a la vista, como en
+    // cualquier ticket de venta moderno.
+    etiquetaTotal_->setStyleSheet("font-weight: 700; font-size: 16px; color: #5865f2;");
     botonConfirmar_ = new QPushButton("Confirmar venta", this);
+    botonConfirmar_->setProperty("clase", "primario");
 
     auto* panelDerecho = new QWidget(this);
+    auto* tituloCarrito = new QLabel("Carrito", panelDerecho);
+    tituloCarrito->setProperty("clase", "titulo");
+
     auto* layoutDerecho = new QVBoxLayout(panelDerecho);
-    layoutDerecho->addWidget(new QLabel("Carrito", panelDerecho));
+    layoutDerecho->addWidget(tituloCarrito);
     layoutDerecho->addWidget(tablaCarrito_);
     layoutDerecho->addWidget(botonQuitar_);
     layoutDerecho->addWidget(etiquetaTotal_);

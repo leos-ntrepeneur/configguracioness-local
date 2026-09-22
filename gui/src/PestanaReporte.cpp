@@ -9,25 +9,33 @@
 PestanaReporte::PestanaReporte(const GestorVentas& gestorVentas, QWidget* padre)
     : QWidget(padre), gestorVentas_(gestorVentas) {
     etiquetaTransacciones_ = new QLabel(this);
+    etiquetaTransacciones_->setProperty("clase", "secundario");
     etiquetaTotal_ = new QLabel(this);
-    etiquetaTotal_->setStyleSheet("font-weight: bold; font-size: 16px;");
+    etiquetaTotal_->setStyleSheet("font-weight: 700; font-size: 18px; color: #5865f2;");
 
     tablaProductos_ = new QTableWidget(this);
     tablaProductos_->setColumnCount(4);
     tablaProductos_->setHorizontalHeaderLabels({"Codigo", "Nombre", "Unidades", "Total"});
     tablaProductos_->setEditTriggers(QTableWidget::NoEditTriggers);
     tablaProductos_->setSelectionMode(QTableWidget::NoSelection);
-    tablaProductos_->horizontalHeader()->setStretchLastSection(true);
     tablaProductos_->verticalHeader()->setVisible(false);
+    tablaProductos_->setAlternatingRowColors(true);
+    tablaProductos_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    tablaProductos_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    tablaProductos_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    tablaProductos_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
 
     auto* botonActualizar = new QPushButton("Actualizar", this);
     connect(botonActualizar, &QPushButton::clicked, this, &PestanaReporte::actualizar);
 
+    auto* tituloProductos = new QLabel("Productos mas vendidos:", this);
+    tituloProductos->setProperty("clase", "titulo");
+
     auto* layout = new QVBoxLayout(this);
-    layout->addWidget(new QLabel("Reporte de ventas del dia", this));
     layout->addWidget(etiquetaTransacciones_);
     layout->addWidget(etiquetaTotal_);
-    layout->addWidget(new QLabel("Productos mas vendidos:", this));
+    layout->addSpacing(8);
+    layout->addWidget(tituloProductos);
     layout->addWidget(tablaProductos_);
     layout->addWidget(botonActualizar);
 

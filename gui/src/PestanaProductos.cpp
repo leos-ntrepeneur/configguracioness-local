@@ -26,7 +26,9 @@ PestanaProductos::PestanaProductos(Inventario& inventario, QWidget* padre)
     campoBusqueda_->setPlaceholderText("Buscar por nombre o codigo...");
 
     etiquetaAlerta_ = new QLabel(this);
-    etiquetaAlerta_->setStyleSheet("color: #b02a2a; font-weight: bold;");
+    // Rojo pensado para verse bien sobre fondo oscuro (el mismo tono
+    // "peligro" que usan los botones destructivos, ver style.qss).
+    etiquetaAlerta_->setStyleSheet("color: #ed4245; font-weight: bold;");
 
     tabla_ = new QTableWidget(this);
     tabla_->setColumnCount(6);
@@ -38,12 +40,28 @@ PestanaProductos::PestanaProductos(Inventario& inventario, QWidget* padre)
     tabla_->setEditTriggers(QTableWidget::NoEditTriggers);
     tabla_->setSelectionBehavior(QTableWidget::SelectRows);
     tabla_->setSelectionMode(QTableWidget::SingleSelection);
-    tabla_->horizontalHeader()->setStretchLastSection(true);
     tabla_->verticalHeader()->setVisible(false);
+    tabla_->setAlternatingRowColors(true); // filas alternas mas claras, ver style.qss.
+
+    // La columna Nombre es la unica que "estira" para llenar el espacio
+    // sobrante; el resto se ajusta a su contenido. Sin esto, Qt reparte el
+    // ancho a partes iguales y los nombres largos se truncan con "...".
+    tabla_->horizontalHeader()->setSectionResizeMode(COL_CODIGO, QHeaderView::ResizeToContents);
+    tabla_->horizontalHeader()->setSectionResizeMode(COL_NOMBRE, QHeaderView::Stretch);
+    tabla_->horizontalHeader()->setSectionResizeMode(COL_PRECIO, QHeaderView::ResizeToContents);
+    tabla_->horizontalHeader()->setSectionResizeMode(COL_STOCK, QHeaderView::ResizeToContents);
+    tabla_->horizontalHeader()->setSectionResizeMode(COL_CATEGORIA, QHeaderView::ResizeToContents);
+    tabla_->horizontalHeader()->setSectionResizeMode(COL_STOCK_MINIMO, QHeaderView::ResizeToContents);
 
     auto* botonNuevo = new QPushButton("Nuevo", this);
     auto* botonEditar = new QPushButton("Editar", this);
     auto* botonEliminar = new QPushButton("Eliminar", this);
+    // "clase" es una propiedad Qt arbitraria (no existe en QPushButton por
+    // defecto); se la inventamos solo para que style.qss pueda distinguir
+    // botones por selector de atributo (QPushButton[clase="primario"]),
+    // igual que se usaria una clase CSS en HTML.
+    botonNuevo->setProperty("clase", "primario");
+    botonEliminar->setProperty("clase", "peligro");
 
     auto* filaBotones = new QHBoxLayout();
     filaBotones->addWidget(botonNuevo);
@@ -95,9 +113,13 @@ void PestanaProductos::llenarTabla(const std::vector<Producto>& productos) {
 
         if (p.estaBajoStockMinimo()) {
             ++filasConStockBajo;
-            // Pinta toda la fila de un rojo suave para que salte a la
-            // vista sin tener que leer numero por numero (Requisito 4).
-            QColor colorAlerta(255, 224, 224);
+            // Pinta toda la fila de un rojo oscuro (mismo tono que el
+            // resto de las alertas del tema) para que salte a la vista
+            // sin tener que leer numero por numero (Requisito 4). El
+            // color del TEXTO no se toca aqui: lo sigue controlando
+            // style.qss (QTableWidget::item { color: ... }), setBackground
+            // solo cambia el relleno de la celda.
+            QColor colorAlerta(92, 43, 47);
             for (int columna = 0; columna < tabla_->columnCount(); ++columna) {
                 tabla_->item(fila, columna)->setBackground(colorAlerta);
             }
