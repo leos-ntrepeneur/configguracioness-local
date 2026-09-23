@@ -78,7 +78,11 @@ inventario-pos/
 │   ├── src/                        # Implementaciones .cpp + main_gui.cpp
 │   └── resources/
 │       ├── style.qss               # Hoja de estilo (QSS) del tema oscuro
-│       └── resources.qrc           # Empaqueta style.qss dentro del .exe
+│       ├── resources.qrc           # Empaqueta style.qss/logo/fuentes en el .exe
+│       ├── app.rc                  # Icono del .exe en Windows (solo WIN32)
+│       ├── icons/                  # logo.svg, logo.png, app.ico
+│       ├── fonts/                  # Manrope (.ttf, licencia OFL)
+│       └── licenses/               # Licencia de la fuente incrustada
 ├── data/                        # Datos persistidos (productos.csv, ventas.csv);
 │                                 # se generan solos al usar el programa, no se
 │                                 # versionan en git (ver .gitignore)
@@ -140,6 +144,31 @@ inventario-pos/
 Cada pestaña reutiliza `Inventario`/`GestorVentas`/las excepciones de
 negocio tal cual, sin ninguna clase nueva de lógica — la única diferencia
 con la consola es cómo se piden/muestran los datos.
+
+### Identidad visual
+
+- **Logo**: monograma "IP" en una insignia con degradado (`gui/resources/icons/`),
+  diseñado en SVG y exportado a `.ico` multi-resolución para Windows. Se usa
+  como icono de ventana/taskbar (`TemaOscuro.cpp`) y como icono del propio
+  `.exe` (`gui/resources/app.rc`, solo se compila en Windows).
+- **Tipografía**: [Manrope](https://github.com/sharanda/manrope) (licencia
+  SIL Open Font License, incrustada como recurso — no hace falta tenerla
+  instalada) para títulos y encabezados de pestaña; el texto de datos
+  (tablas, formularios) usa la fuente del sistema, más legible a tamaños
+  chicos.
+- **Color**: acento azul-violeta en degradado para botones de acción
+  primaria (`qlineargradient` en `style.qss`), y un teal (`#14b8a6`)
+  deliberadamente distinto para filas seleccionadas en tablas, para que
+  "botón de acción" y "fila seleccionada" no se confundan visualmente.
+
+### Ajuste manual de stock
+
+A diferencia de la primera versión, el stock **sí se puede corregir
+directamente** al editar un producto (`Producto::setStock`), para casos
+como un conteo físico que no coincide con el sistema o mercancía dañada.
+Es un ajuste directo, no pasa por `GestorVentas` ni queda registrado como
+venta — el código del producto sigue siendo el único campo bloqueado al
+editar.
 
 ### Persistencia: cómo funciona
 

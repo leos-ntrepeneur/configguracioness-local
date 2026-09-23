@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7C86F7"/>
+      <stop offset="55%" stop-color="#5865F2"/>
+      <stop offset="100%" stop-color="#3730A3"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="8" y="8" width="496" height="496" rx="112" fill="url(#bg)"/>
+  <rect x="8" y="8" width="496" height="248" rx="112" fill="url(#shine)"/>
+  <rect x="8" y="8" width="496" height="496" rx="112" fill="none" stroke="#2A2FA0" stroke-opacity="0.35" stroke-width="2"/>
+
+  <!-- Monograma IP en Manrope ExtraBold -->
+  <text x="256" y="338" font-family="Manrope, sans-serif" font-weight="800"
+        font-size="252" fill="#FFFFFF" text-anchor="middle" letter-spacing="-8">IP</text>
+
+  <!-- Acento: pequena marca de "caja/inventario" bajo el texto -->
+  <rect x="176" y="368" width="160" height="10" rx="5" fill="#FFFFFF" fill-opacity="0.85"/>
+</svg>

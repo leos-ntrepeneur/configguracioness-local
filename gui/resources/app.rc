@@ -1,0 +1,8 @@
+// app.rc — recurso de Windows que incrusta el icono DENTRO del propio
+// inventario_pos_gui.exe (lo que se ve en el Explorador de archivos, el
+// acceso directo, y el instante antes de que la ventana termine de
+// pintarse). Es un mecanismo exclusivo de Windows -- no existe equivalente
+// en Linux/macOS, por eso CMakeLists.txt solo lo agrega "if(WIN32)". La
+// herramienta que lo compila (windres en MinGW, rc.exe con MSVC) convierte
+// este texto a datos binarios que el linker mete dentro del .exe.
+IDI_ICON1 ICON "icons/app.ico"

@@ -75,7 +75,7 @@ PestanaVentas::PestanaVentas(Inventario& inventario, GestorVentas& gestorVentas,
     etiquetaTotal_ = new QLabel("Total: $0.00", this);
     // Color de acento para que el total salte a la vista, como en
     // cualquier ticket de venta moderno.
-    etiquetaTotal_->setStyleSheet("font-weight: 700; font-size: 16px; color: #5865f2;");
+    etiquetaTotal_->setStyleSheet("font-family: 'Manrope'; font-weight: 800; font-size: 19px; color: #6b76f5;");
     botonConfirmar_ = new QPushButton("Confirmar venta", this);
     botonConfirmar_->setProperty("clase", "primario");
 
@@ -104,9 +104,14 @@ PestanaVentas::PestanaVentas(Inventario& inventario, GestorVentas& gestorVentas,
     connect(botonQuitar_, &QPushButton::clicked, this, &PestanaVentas::alQuitarDelCarrito);
     connect(botonConfirmar_, &QPushButton::clicked, this, &PestanaVentas::alConfirmarVenta);
     // Doble clic en un producto es un atajo para agregarlo directo, sin
-    // pasar primero por seleccionar y luego darle al boton.
+    // pasar primero por seleccionar y luego darle al boton. Mismo atajo en
+    // el carrito, pero para quitar -- simetria: doble clic agrega de un
+    // lado, doble clic quita del otro.
     connect(tablaProductos_, &QTableWidget::cellDoubleClicked, this, [this](int, int) {
         alAgregarAlCarrito();
+    });
+    connect(tablaCarrito_, &QTableWidget::cellDoubleClicked, this, [this](int, int) {
+        alQuitarDelCarrito();
     });
 
     refrescarListaProductos();

@@ -63,6 +63,14 @@ public:
     void setCategoria(std::string categoria);
     void setStockMinimo(int stockMinimo);
 
+    // Ajuste MANUAL del stock (ej. correccion de inventario fisico,
+    // mercancia dañada, conteo inicial mal capturado) desde la pantalla de
+    // "editar producto". Es un ajuste directo, no una venta: no pasa por
+    // GestorVentas ni queda registrado como transaccion. Reemplaza el valor
+    // por completo (a diferencia de aumentarStock/reducirStock, que suman o
+    // restan una cantidad).
+    void setStock(int nuevoStock);
+
     // Operaciones de stock usadas por Inventario/GestorVentas. Devuelven
     // referencia a *this? No: aqui no hace falta encadenado, asi que son void.
     void aumentarStock(int cantidad);

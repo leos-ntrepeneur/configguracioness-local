@@ -2,6 +2,8 @@
 
 #include <QApplication>
 #include <QFile>
+#include <QFontDatabase>
+#include <QIcon>
 #include <QPalette>
 #include <QTextStream>
 
@@ -15,6 +17,28 @@ void aplicarTemaOscuro(QApplication& app) {
     // dibuja todo el mismo Qt, asi que nuestra paleta y QSS mandan de
     // verdad en cada widget.
     QApplication::setStyle("Fusion");
+
+    // --- Icono de la aplicacion ---
+    // Se usa en la barra de titulo, la barra de tareas de Windows y el
+    // Alt+Tab. El ".exe" en si tambien lleva su propio icono incrustado
+    // (ver gui/resources/icons/app.ico y el recurso .rc en CMakeLists.txt)
+    // para que se vea bien en el Explorador de archivos ANTES de abrir el
+    // programa; este de aqui es el que se ve una vez que ya esta corriendo.
+    app.setWindowIcon(QIcon(":/icons/logo.png"));
+
+    // --- Fuente para titulos ---
+    // QFontDatabase::addApplicationFont carga un archivo .ttf empaquetado
+    // en los recursos y lo registra en el sistema de fuentes de Qt SOLO
+    // para esta aplicacion -- no hace falta que el usuario tenga "Manrope"
+    // instalada en su Windows, viaja dentro del propio programa. Se usa
+    // nada mas para titulos/encabezados (ver style.qss, selector
+    // QLabel[clase="titulo"] y QTabBar::tab); el texto de datos (tablas,
+    // formularios) se queda con la fuente del sistema (Segoe UI en
+    // Windows), que a tamaños chicos es mas legible que casi cualquier
+    // fuente "de diseño".
+    QFontDatabase::addApplicationFont(":/fonts/Manrope-SemiBold.ttf");
+    QFontDatabase::addApplicationFont(":/fonts/Manrope-Bold.ttf");
+    QFontDatabase::addApplicationFont(":/fonts/Manrope-ExtraBold.ttf");
 
     // QPalette: colores "de bajo nivel" que usa el motor de estilos de Qt
     // para dibujar elementos que NO pasan por las propiedades normales de
@@ -34,6 +58,12 @@ void aplicarTemaOscuro(QApplication& app) {
     const QColor textoSecundario(148, 155, 164); // #949ba4
     const QColor textoDeshabilitado(106, 110, 120); // #6a6e78
     const QColor acento(88, 101, 242);       // #5865f2
+    const QColor seleccion(20, 184, 166);    // #14b8a6 -- teal, deliberadamente
+                                              // distinto del azul-violeta de
+                                              // los botones (ver style.qss),
+                                              // para que "boton de accion" y
+                                              // "fila seleccionada" no se
+                                              // confundan al ser el mismo color.
 
     paleta.setColor(QPalette::Window, fondo);
     paleta.setColor(QPalette::WindowText, texto);
@@ -43,10 +73,10 @@ void aplicarTemaOscuro(QApplication& app) {
     paleta.setColor(QPalette::ToolTipText, texto);
     paleta.setColor(QPalette::Text, texto);
     paleta.setColor(QPalette::Button, superficieAlterna);
-    paleta.setColor(QPalette::ButtonText, texto);            // <- esto es lo que faltaba
+    paleta.setColor(QPalette::ButtonText, texto);
     paleta.setColor(QPalette::BrightText, QColor(237, 66, 69)); // #ed4245, para errores.
     paleta.setColor(QPalette::Link, acento);
-    paleta.setColor(QPalette::Highlight, acento);
+    paleta.setColor(QPalette::Highlight, seleccion);
     paleta.setColor(QPalette::HighlightedText, Qt::white);
 
     // El "grupo" Disabled son los colores que usa CUALQUIER widget cuando

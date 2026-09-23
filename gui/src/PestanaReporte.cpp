@@ -11,11 +11,11 @@ PestanaReporte::PestanaReporte(const GestorVentas& gestorVentas, QWidget* padre)
     etiquetaTransacciones_ = new QLabel(this);
     etiquetaTransacciones_->setProperty("clase", "secundario");
     etiquetaTotal_ = new QLabel(this);
-    etiquetaTotal_->setStyleSheet("font-weight: 700; font-size: 18px; color: #5865f2;");
+    etiquetaTotal_->setStyleSheet("font-family: 'Manrope'; font-weight: 800; font-size: 22px; color: #6b76f5;");
 
     tablaProductos_ = new QTableWidget(this);
-    tablaProductos_->setColumnCount(4);
-    tablaProductos_->setHorizontalHeaderLabels({"Codigo", "Nombre", "Unidades", "Total"});
+    tablaProductos_->setColumnCount(5);
+    tablaProductos_->setHorizontalHeaderLabels({"Codigo", "Nombre", "Unidades", "Precio", "Total"});
     tablaProductos_->setEditTriggers(QTableWidget::NoEditTriggers);
     tablaProductos_->setSelectionMode(QTableWidget::NoSelection);
     tablaProductos_->verticalHeader()->setVisible(false);
@@ -24,6 +24,7 @@ PestanaReporte::PestanaReporte(const GestorVentas& gestorVentas, QWidget* padre)
     tablaProductos_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
     tablaProductos_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     tablaProductos_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+    tablaProductos_->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
 
     auto* botonActualizar = new QPushButton("Actualizar", this);
     connect(botonActualizar, &QPushButton::clicked, this, &PestanaReporte::actualizar);
@@ -51,9 +52,14 @@ void PestanaReporte::actualizar() {
     tablaProductos_->setRowCount(static_cast<int>(reporte.productosMasVendidos.size()));
     for (int fila = 0; fila < static_cast<int>(reporte.productosMasVendidos.size()); ++fila) {
         const ResumenProducto& r = reporte.productosMasVendidos[static_cast<std::size_t>(fila)];
+        // Precio unitario promedio del dia (ver comentario equivalente en
+        // Menu::alVerReporteVentasDelDia): se calcula, no se guarda, para
+        // reflejar lo realmente cobrado aunque el precio haya cambiado.
+        double precioPromedio = r.cantidadVendida > 0 ? r.totalVendido / r.cantidadVendida : 0.0;
         tablaProductos_->setItem(fila, 0, new QTableWidgetItem(QString::fromStdString(r.codigo)));
         tablaProductos_->setItem(fila, 1, new QTableWidgetItem(QString::fromStdString(r.nombre)));
         tablaProductos_->setItem(fila, 2, new QTableWidgetItem(QString::number(r.cantidadVendida)));
-        tablaProductos_->setItem(fila, 3, new QTableWidgetItem(QString::number(r.totalVendido, 'f', 2)));
+        tablaProductos_->setItem(fila, 3, new QTableWidgetItem(QString::number(precioPromedio, 'f', 2)));
+        tablaProductos_->setItem(fila, 4, new QTableWidgetItem(QString::number(r.totalVendido, 'f', 2)));
     }
 }

@@ -32,7 +32,13 @@ PestanaProductos::PestanaProductos(Inventario& inventario, QWidget* padre)
 
     tabla_ = new QTableWidget(this);
     tabla_->setColumnCount(6);
-    tabla_->setHorizontalHeaderLabels({"Codigo", "Nombre", "Precio", "Stock", "Categoria", "Stock min."});
+    tabla_->setHorizontalHeaderLabels({"Codigo", "Nombre", "Precio", "Stock", "Categoria", "Alerta si baja de"});
+    // Tooltip en el encabezado: aclara que esa columna es un UMBRAL (a
+    // partir de que cantidad se enciende la alerta de stock bajo), no un
+    // segundo numero de stock -- confusion habitual si solo se ve "Stock
+    // min." junto a "Stock" sin mas contexto.
+    tabla_->horizontalHeaderItem(5)->setToolTip(
+        "Cuando el stock de este producto baje de este numero, se marca como \"stock bajo\".");
     // NoEditTriggers: la tabla es de solo lectura para el usuario (para
     // editar un producto se usa el boton "Editar" + el dialogo, no
     // escribiendo directo en la celda). SelectRows: al hacer clic se
@@ -168,7 +174,7 @@ void PestanaProductos::alHacerEditar() {
         }
         Producto editado = dialogo.obtenerProducto();
         inventario_.editarProducto(editado.getCodigo(), editado.getNombre(), editado.getPrecio(),
-                                    editado.getCategoria(), editado.getStockMinimo());
+                                    editado.getStock(), editado.getCategoria(), editado.getStockMinimo());
         refrescar();
         emit datosModificados();
     } catch (const std::exception& e) {

@@ -58,6 +58,16 @@ if(Qt6_FOUND)
     set(CMAKE_AUTOMOC ON)
     set(CMAKE_AUTORCC ON)
 
+    # El icono del .exe (visible en el Explorador de archivos de Windows,
+    # no solo dentro del programa) es un mecanismo exclusivo de Windows via
+    # un archivo .rc -- no existe equivalente en Linux/macOS, por eso se
+    # agrega solo "if(WIN32)". CMake compila un .rc automaticamente con
+    # windres (MinGW) o rc.exe (MSVC) con solo listarlo como fuente, igual
+    # que un .cpp.
+    if(WIN32)
+        set(GUI_SOURCES ${GUI_SOURCES} gui/resources/app.rc)
+    endif()
+
     add_executable(inventario_pos_gui ${CORE_SOURCES} ${GUI_SOURCES} ${GUI_HEADERS} gui/resources/resources.qrc)
     target_include_directories(inventario_pos_gui PRIVATE include gui/include)
     target_link_libraries(inventario_pos_gui PRIVATE Qt6::Widgets)

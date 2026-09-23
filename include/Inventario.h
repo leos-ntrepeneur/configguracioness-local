@@ -29,12 +29,14 @@ public:
     // existe. Recibe el Producto ya construido (y validado) por el llamador.
     void agregarProducto(const Producto& producto);
 
-    // Actualiza nombre/precio/categoria/stock minimo de un producto existente.
-    // El stock NO se edita aqui a mano; se ajusta via ventas o metodos
-    // dedicados, para evitar inconsistencias con el historial de ventas.
+    // Actualiza nombre/precio/categoria/stock/stock minimo de un producto
+    // existente. El stock se puede ajustar aqui directamente (ej. correccion
+    // de inventario fisico), ademas del camino normal de descontarlo al
+    // vender (ver descontarStock).
     void editarProducto(const std::string& codigo,
                          const std::string& nuevoNombre,
                          double nuevoPrecio,
+                         int nuevoStock,
                          const std::string& nuevaCategoria,
                          int nuevoStockMinimo);
 

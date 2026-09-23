@@ -127,6 +127,11 @@ void Producto::setStockMinimo(int stockMinimo) {
     stockMinimo_ = stockMinimo;
 }
 
+void Producto::setStock(int nuevoStock) {
+    validarStock(nuevoStock, "El stock");
+    stock_ = nuevoStock;
+}
+
 void Producto::aumentarStock(int cantidad) {
     if (cantidad < 0) {
         throw EntradaInvalida("La cantidad a aumentar no puede ser negativa.");

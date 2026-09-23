@@ -15,7 +15,13 @@ MainWindow::MainWindow(QWidget* padre)
       repositorioProductos_(std::make_unique<RepositorioProductosCsv>("data/productos.csv")),
       repositorioVentas_(std::make_unique<RepositorioVentasCsv>("data/ventas.csv")) {
     setWindowTitle("Inventario POS");
-    resize(900, 600);
+    // Tamaño inicial mas grande, a tono con la fuente mas grande del tema
+    // (ver style.qss): con la ventana chica de antes, la tabla de
+    // productos con la fuente nueva se sentia apretada. setMinimumSize
+    // evita que el usuario la encoja a un punto en que las tablas dejen de
+    // verse bien.
+    resize(1280, 840);
+    setMinimumSize(1000, 650);
 
     // Misma carga inicial que main.cpp en la version de consola: si los
     // archivos no existen todavia, cargarTodos()/cargarTodas() devuelven

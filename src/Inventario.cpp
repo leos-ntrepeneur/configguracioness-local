@@ -16,6 +16,7 @@ void Inventario::agregarProducto(const Producto& producto) {
 void Inventario::editarProducto(const std::string& codigo,
                                  const std::string& nuevoNombre,
                                  double nuevoPrecio,
+                                 int nuevoStock,
                                  const std::string& nuevaCategoria,
                                  int nuevoStockMinimo) {
     // find() devuelve un iterador; si es end() la clave no existe. Es el
@@ -28,6 +29,7 @@ void Inventario::editarProducto(const std::string& codigo,
     Producto& producto = it->second;
     producto.setNombre(nuevoNombre);
     producto.setPrecio(nuevoPrecio);
+    producto.setStock(nuevoStock);
     producto.setCategoria(nuevaCategoria);
     producto.setStockMinimo(nuevoStockMinimo);
 }

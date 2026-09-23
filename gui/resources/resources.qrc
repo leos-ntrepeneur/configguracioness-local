@@ -10,5 +10,9 @@ nunca con una ruta de disco real.
 <RCC>
     <qresource prefix="/">
         <file>style.qss</file>
+        <file>icons/logo.png</file>
+        <file>fonts/Manrope-SemiBold.ttf</file>
+        <file>fonts/Manrope-Bold.ttf</file>
+        <file>fonts/Manrope-ExtraBold.ttf</file>
     </qresource>
 </RCC>

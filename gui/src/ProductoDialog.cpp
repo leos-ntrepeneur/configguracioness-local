@@ -39,6 +39,11 @@ ProductoDialog::ProductoDialog(Modo modo, const Producto* existente, QWidget* pa
 
     campoStockMinimo_ = new QSpinBox(this);
     campoStockMinimo_->setRange(0, Producto::STOCK_MAXIMO);
+    // Tooltip aclaratorio: "stock minimo" es un UMBRAL de alerta, no un
+    // segundo numero de existencias -- confusion habitual al tenerlo junto
+    // a "Stock" sin mas contexto.
+    campoStockMinimo_->setToolTip(
+        "Cuando el stock baje de este numero, el producto se marca como \"stock bajo\".");
 
     if (existente != nullptr) {
         campoCodigo_->setText(QString::fromStdString(existente->getCodigo()));
@@ -49,22 +54,26 @@ ProductoDialog::ProductoDialog(Modo modo, const Producto* existente, QWidget* pa
         campoStockMinimo_->setValue(existente->getStockMinimo());
     }
 
-    // En modo Editar, el codigo no se puede tocar (es la clave del
-    // producto) y el stock tampoco se edita aqui a mano -- se mueve solo
-    // via ventas, igual que en la version de consola (Inventario::
-    // editarProducto ni siquiera recibe un stock nuevo como parametro).
+    // En modo Editar, solo el codigo queda bloqueado (es la clave del
+    // producto, cambiarlo equivaldria a crear uno distinto). El stock SI
+    // se puede corregir aqui a mano -- por ejemplo, un conteo fisico que no
+    // coincide con el sistema, o mercancia dañada/perdida -- ademas del
+    // camino normal de bajar solo al vender.
     if (modo_ == Modo::Editar) {
         campoCodigo_->setEnabled(false);
-        campoStock_->setEnabled(false);
     }
 
+    // Orden pensado para agrupar los campos relacionados con cantidades
+    // (Stock y su umbral de alerta) uno junto al otro al final, en vez de
+    // separados por Categoria en medio -- eso es lo que hacia confusa la
+    // relacion entre ambos.
     auto* formulario = new QFormLayout();
     formulario->addRow("Codigo:", campoCodigo_);
     formulario->addRow("Nombre:", campoNombre_);
-    formulario->addRow("Precio:", campoPrecio_);
-    formulario->addRow("Stock:", campoStock_);
     formulario->addRow("Categoria:", campoCategoria_);
-    formulario->addRow("Stock minimo:", campoStockMinimo_);
+    formulario->addRow("Precio:", campoPrecio_);
+    formulario->addRow("Stock actual:", campoStock_);
+    formulario->addRow("Alertar si baja de:", campoStockMinimo_);
 
     // QDialogButtonBox arma automaticamente los botones "Aceptar"/
     // "Cancelar" (con el texto traducido al idioma del sistema) y ya

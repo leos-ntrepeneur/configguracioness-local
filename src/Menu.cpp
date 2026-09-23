@@ -113,7 +113,7 @@ void Menu::alDarAltaProducto() {
     double precio = leerDouble("Precio: ");
     int stock = leerEntero("Stock inicial: ");
     std::string categoria = leerLinea("Categoria (opcional, Enter para omitir): ");
-    int stockMinimo = leerEntero("Stock minimo para alertas (0 si no aplica): ");
+    int stockMinimo = leerEntero("Alertar cuando el stock baje de (0 si no aplica): ");
 
     Producto nuevo(codigo, nombre, precio, stock, categoria, stockMinimo);
     inventario_.agregarProducto(nuevo);
@@ -132,14 +132,18 @@ void Menu::alEditarProducto() {
     std::cout << "Datos actuales -> nombre: " << actual.getNombre()
               << ", precio: " << actual.getPrecio()
               << ", categoria: " << actual.getCategoria()
-              << ", stock minimo: " << actual.getStockMinimo() << "\n";
+              << ", stock actual: " << actual.getStock()
+              << ", alerta si baja de: " << actual.getStockMinimo() << "\n";
 
     std::string nombre = leerLinea("Nuevo nombre: ");
     double precio = leerDouble("Nuevo precio: ");
     std::string categoria = leerLinea("Nueva categoria (Enter para dejar vacia): ");
-    int stockMinimo = leerEntero("Nuevo stock minimo: ");
+    // El stock SI se puede corregir aqui a mano (ej. conteo fisico, mercancia
+    // dañada) -- es un ajuste directo, distinto de que baje solo al vender.
+    int stock = leerEntero("Stock real en existencia: ");
+    int stockMinimo = leerEntero("Alertar cuando el stock baje de: ");
 
-    inventario_.editarProducto(codigo, nombre, precio, categoria, stockMinimo);
+    inventario_.editarProducto(codigo, nombre, precio, stock, categoria, stockMinimo);
     std::cout << "Producto actualizado correctamente.\n";
     guardarDatos();
 }
@@ -244,13 +248,22 @@ void Menu::alVerReporteVentasDelDia() const {
               << std::left << std::setw(10) << "Codigo"
               << std::setw(25) << "Nombre"
               << std::right << std::setw(10) << "Unidades"
+              << std::setw(12) << "Precio"
               << std::setw(14) << "Total" << "\n";
-    std::cout << std::string(59, '-') << "\n";
+    std::cout << std::string(71, '-') << "\n";
 
     for (const ResumenProducto& resumen : reporte.productosMasVendidos) {
+        // Precio unitario promedio del dia: totalVendido / cantidadVendida.
+        // Se calcula (no se guarda) porque si el precio del producto cambio
+        // a medio dia, esto muestra el promedio real de lo cobrado, no un
+        // precio "actual" que podria no coincidir con ninguna venta.
+        double precioPromedio = resumen.cantidadVendida > 0
+                                     ? resumen.totalVendido / resumen.cantidadVendida
+                                     : 0.0;
         std::cout << std::left << std::setw(10) << resumen.codigo
                    << std::setw(25) << resumen.nombre
                    << std::right << std::setw(10) << resumen.cantidadVendida
+                   << std::setw(12) << std::fixed << std::setprecision(2) << precioPromedio
                    << std::setw(14) << std::fixed << std::setprecision(2) << resumen.totalVendido
                    << "\n";
     }
