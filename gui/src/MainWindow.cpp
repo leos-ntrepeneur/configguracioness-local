@@ -1,8 +1,10 @@
 #include "MainWindow.h"
+#include "PestanaCortes.h"
 #include "PestanaInformacionNegocio.h"
 #include "PestanaProductos.h"
 #include "PestanaReporte.h"
 #include "PestanaVentas.h"
+#include "RepositorioCortesCsv.h"
 #include "RepositorioInformacionNegocioCsv.h"
 #include "RepositorioProductosCsv.h"
 #include "RepositorioVentasCsv.h"
@@ -14,9 +16,11 @@
 MainWindow::MainWindow(QWidget* padre)
     : QMainWindow(padre),
       gestorVentas_(inventario_),
+      gestorCortes_(gestorVentas_),
       repositorioProductos_(std::make_unique<RepositorioProductosCsv>("data/productos.csv")),
       repositorioVentas_(std::make_unique<RepositorioVentasCsv>("data/ventas.csv")),
-      repositorioInformacionNegocio_(std::make_unique<RepositorioInformacionNegocioCsv>("data/negocio.csv")) {
+      repositorioInformacionNegocio_(std::make_unique<RepositorioInformacionNegocioCsv>("data/negocio.csv")),
+      repositorioCortes_(std::make_unique<RepositorioCortesCsv>("data/cortes.csv")) {
     setWindowTitle("Inventario POS");
     // Tamaño inicial mas grande, a tono con la fuente mas grande del tema
     // (ver style.qss): con la ventana chica de antes, la tabla de
@@ -31,6 +35,7 @@ MainWindow::MainWindow(QWidget* padre)
     // vectores vacios en vez de fallar.
     inventario_.cargarProductos(repositorioProductos_->cargarTodos());
     gestorVentas_.cargarVentas(repositorioVentas_->cargarTodas());
+    gestorCortes_.cargarCortes(repositorioCortes_->cargarTodos());
     informacionNegocio_ = repositorioInformacionNegocio_->cargar();
 
     tabs_ = new QTabWidget(this);
@@ -39,11 +44,13 @@ MainWindow::MainWindow(QWidget* padre)
     pestanaReporte_ = new PestanaReporte(gestorVentas_, tabs_);
     pestanaInformacionNegocio_ =
         new PestanaInformacionNegocio(informacionNegocio_, *repositorioInformacionNegocio_, tabs_);
+    pestanaCortes_ = new PestanaCortes(gestorCortes_, *repositorioCortes_, informacionNegocio_, tabs_);
 
     tabs_->addTab(pestanaProductos_, "Productos");
     tabs_->addTab(pestanaVentas_, "Vender");
     tabs_->addTab(pestanaReporte_, "Reporte del dia");
     tabs_->addTab(pestanaInformacionNegocio_, "Mi negocio");
+    tabs_->addTab(pestanaCortes_, "Cortes de caja");
     setCentralWidget(tabs_);
 
     statusBar()->showMessage("Datos cargados desde data/productos.csv y data/ventas.csv", 5000);

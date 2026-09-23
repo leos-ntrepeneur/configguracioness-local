@@ -13,8 +13,8 @@ namespace {
 constexpr int ANCHO_TICKET_CARACTERES = 40;
 } // namespace
 
-TicketDialog::TicketDialog(const std::string& textoTicket, QWidget* padre) : QDialog(padre) {
-    setWindowTitle("Ticket de venta");
+TicketDialog::TicketDialog(const std::string& contenido, QWidget* padre, QString titulo) : QDialog(padre) {
+    setWindowTitle(titulo);
 
     auto* texto = new QTextEdit(this);
     texto->setReadOnly(true);
@@ -23,7 +23,7 @@ TicketDialog::TicketDialog(const std::string& textoTicket, QWidget* padre) : QDi
     // "torcida", que es justo lo que NoWrap evita) -- aparece una barra de
     // desplazamiento horizontal en vez de eso.
     texto->setLineWrapMode(QTextEdit::NoWrap);
-    texto->setPlainText(QString::fromStdString(textoTicket));
+    texto->setPlainText(QString::fromStdString(contenido));
     // Una fuente monoespaciada es indispensable aqui: GeneradorTicket.cpp
     // alinea columnas y centra texto contando caracteres uno a uno (ver
     // `centrar()`), algo que solo se ve derecho si cada caracter ocupa el

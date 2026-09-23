@@ -1,8 +1,10 @@
 #include "Menu.h"
 #include "Excepciones.h"
+#include "GeneradorCorte.h"
 #include "GeneradorTicket.h"
 #include "Utilidades.h"
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <vector>
@@ -18,14 +20,18 @@ using utilidades::leerLinea;
 // normal), tiene que "amarrarse" a su objetivo en este punto.
 Menu::Menu(Inventario& inventario,
            GestorVentas& gestorVentas,
+           GestorCortes& gestorCortes,
            IRepositorioProductos& repositorioProductos,
            IRepositorioVentas& repositorioVentas,
-           IRepositorioInformacionNegocio& repositorioInformacionNegocio)
+           IRepositorioInformacionNegocio& repositorioInformacionNegocio,
+           IRepositorioCortes& repositorioCortes)
     : inventario_(inventario),
       gestorVentas_(gestorVentas),
+      gestorCortes_(gestorCortes),
       repositorioProductos_(repositorioProductos),
       repositorioVentas_(repositorioVentas),
       repositorioInformacionNegocio_(repositorioInformacionNegocio),
+      repositorioCortes_(repositorioCortes),
       informacionNegocio_(repositorioInformacionNegocio.cargar()) {}
 
 void Menu::ejecutar() {
@@ -46,6 +52,12 @@ void Menu::ejecutar() {
                     break;
                 case 4:
                     alConfigurarInformacionNegocio();
+                    break;
+                case 5:
+                    alCerrarDia();
+                    break;
+                case 6:
+                    alVerCortesAnteriores();
                     break;
                 case 0:
                     salir = true;
@@ -70,6 +82,8 @@ void Menu::mostrarMenuPrincipal() const {
     std::cout << "2. Registrar venta\n";
     std::cout << "3. Reporte de ventas del dia\n";
     std::cout << "4. Informacion del local (para tickets)\n";
+    std::cout << "5. Cerrar el dia (corte de caja)\n";
+    std::cout << "6. Ver cortes anteriores\n";
     std::cout << "0. Salir\n";
 }
 
@@ -277,6 +291,7 @@ void Menu::alVerReporteVentasDelDia() const {
     }
 
     mostrarHistorialTransacciones(reporte.transacciones);
+    mostrarGraficaVentasPorCategoria(reporte.ventasPorCategoria);
 }
 
 void Menu::mostrarHistorialTransacciones(const std::vector<TransaccionDia>& transacciones) const {
@@ -304,6 +319,49 @@ void Menu::mostrarHistorialTransacciones(const std::vector<TransaccionDia>& tran
     }
 }
 
+void Menu::mostrarGraficaVentasPorCategoria(const std::vector<ResumenCategoria>& ventasPorCategoria) const {
+    if (ventasPorCategoria.empty()) {
+        return;
+    }
+
+    std::cout << "\nVentas por categoria:\n";
+
+    // El ancho de cada barra es PROPORCIONAL al total de la categoria mas
+    // vendida (la primera del vector, porque generarReporteDelDia() ya lo
+    // ordena de mayor a menor): esa categoria pinta la barra completa
+    // (ANCHO_MAXIMO caracteres) y las demas se escalan contra ella. Sin
+    // esta normalizacion, una categoria con $50 de ventas se veria con una
+    // barra casi tan larga como una de $5,000.
+    constexpr int ANCHO_MAXIMO = 30;
+    double mayorTotal = ventasPorCategoria.front().totalVendido;
+
+    // El ancho de la columna de nombres se ajusta al nombre mas largo (con
+    // un minimo razonable) para que las barras siempre arranquen alineadas
+    // sin importar si las categorias son cortas ("Aseo") o largas
+    // ("Materiales de construccion").
+    std::size_t anchoNombre = 12;
+    for (const ResumenCategoria& r : ventasPorCategoria) {
+        anchoNombre = std::max(anchoNombre, r.categoria.size());
+    }
+
+    for (const ResumenCategoria& r : ventasPorCategoria) {
+        int anchoBarra = mayorTotal > 0.0
+                              ? static_cast<int>((r.totalVendido / mayorTotal) * ANCHO_MAXIMO)
+                              : 0;
+        // Una categoria con ventas (aunque sean chicas) siempre pinta al
+        // menos 1 caracter -- si no, una diferencia real de $0.01 contra
+        // $0.00 se veria identica (barra vacia) a no haber vendido nada.
+        if (anchoBarra == 0 && r.totalVendido > 0.0) {
+            anchoBarra = 1;
+        }
+
+        std::cout << std::left << std::setw(static_cast<int>(anchoNombre)) << r.categoria << " ["
+                   << std::string(static_cast<std::size_t>(anchoBarra), '#')
+                   << std::string(static_cast<std::size_t>(ANCHO_MAXIMO - anchoBarra), ' ') << "] $"
+                   << std::right << std::fixed << std::setprecision(2) << r.totalVendido << "\n";
+    }
+}
+
 void Menu::alConfigurarInformacionNegocio() {
     std::cout << "\n-- Informacion del local --\n";
     std::cout << "Esto se usa para el encabezado de los tickets de venta.\n";
@@ -328,6 +386,70 @@ void Menu::alConfigurarInformacionNegocio() {
 
     repositorioInformacionNegocio_.guardar(informacionNegocio_);
     std::cout << "Informacion del local guardada.\n";
+}
+
+void Menu::alCerrarDia() {
+    std::cout << "\n-- Cerrar el dia (corte de caja) --\n";
+    std::cout << "Esto genera un registro PERMANENTE con el resumen de las ventas de hoy\n";
+    std::cout << "(folios incluidos, total por efectivo/tarjeta). No modifica las ventas\n";
+    std::cout << "ya registradas -- es solo un resumen archivado, y no se puede deshacer.\n";
+    if (!confirmar("Confirmas el cierre del dia?")) {
+        std::cout << "Cierre cancelado.\n";
+        return;
+    }
+
+    const CorteCaja& corte = gestorCortes_.cerrarDia();
+    try {
+        repositorioCortes_.agregar(corte);
+    } catch (const std::exception& e) {
+        std::cout << "Aviso: no se pudo guardar el corte en disco (" << e.what() << ").\n";
+    }
+
+    std::cout << "\n" << generarTextoCorte(corte, informacionNegocio_);
+}
+
+void Menu::alVerCortesAnteriores() const {
+    const std::vector<CorteCaja>& cortes = gestorCortes_.listarCortes();
+    std::cout << "\n-- Cortes de caja anteriores --\n";
+    if (cortes.empty()) {
+        std::cout << "Todavia no se ha cerrado ningun dia.\n";
+        return;
+    }
+
+    mostrarTablaCortes(cortes);
+
+    int numeroCorte = leerEntero("\nVer detalle de un corte (numero, 0 para omitir): ");
+    if (numeroCorte == 0) {
+        return;
+    }
+    const CorteCaja* corte = gestorCortes_.buscarPorNumeroCorte(numeroCorte);
+    if (corte == nullptr) {
+        std::cout << "No existe un corte con ese numero.\n";
+        return;
+    }
+    std::cout << "\n" << generarTextoCorte(*corte, informacionNegocio_);
+}
+
+void Menu::mostrarTablaCortes(const std::vector<CorteCaja>& cortes) const {
+    std::cout << std::left << std::setw(10) << "Corte"
+               << std::setw(22) << "Cierre"
+               << std::setw(14) << "Folios"
+               << std::right << std::setw(10) << "Ventas"
+               << std::setw(14) << "Total" << "\n";
+    std::cout << std::string(70, '-') << "\n";
+
+    for (const CorteCaja& corte : cortes) {
+        std::string folios = corte.getNumeroTransacciones() > 0
+                                  ? std::to_string(corte.getFolioInicial()) + "-" +
+                                        std::to_string(corte.getFolioFinal())
+                                  : "-";
+        std::cout << std::left << std::setw(10) << corte.getNumeroCorte()
+                   << std::setw(22) << corte.fechaHoraCierreComoTexto()
+                   << std::setw(14) << folios
+                   << std::right << std::setw(10) << corte.getNumeroTransacciones()
+                   << std::setw(14) << std::fixed << std::setprecision(2) << corte.getTotalVendido()
+                   << "\n";
+    }
 }
 
 // --- Registro de ventas ---

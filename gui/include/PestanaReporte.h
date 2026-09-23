@@ -15,6 +15,7 @@
 
 class QLabel;
 class QTableWidget;
+class GraficaBarras;
 
 class PestanaReporte : public QWidget {
     Q_OBJECT
@@ -37,6 +38,10 @@ private:
     // mismo producto entre si, en vez de solo ver el total sumado por
     // producto en tablaProductos_.
     QTableWidget* tablaTransacciones_;
+    // Grafica de ventas por categoria -- se repuebla en cada actualizar(),
+    // igual que las tablas de arriba, asi que aparece "automaticamente"
+    // sin que el usuario tenga que pedirla aparte.
+    GraficaBarras* graficaCategorias_;
 };
 
 #endif // PESTANA_REPORTE_H

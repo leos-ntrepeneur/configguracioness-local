@@ -28,6 +28,10 @@ set(CORE_SOURCES
     src/InformacionNegocio.cpp
     src/RepositorioInformacionNegocioCsv.cpp
     src/GeneradorTicket.cpp
+    src/CorteCaja.cpp
+    src/GestorCortes.cpp
+    src/RepositorioCortesCsv.cpp
+    src/GeneradorCorte.cpp
 )
 
 set(CONSOLE_SOURCES

@@ -87,6 +87,9 @@ ReporteVentasDia GestorVentas::generarReporteDelDia() const {
     // Inventario): la clave garantiza que cada producto aparezca una sola
     // vez en el resumen aunque se haya vendido en varias transacciones.
     std::map<std::string, ResumenProducto> resumenPorCodigo;
+    // Igual, pero agrupando por categoria en vez de por producto (para la
+    // grafica de ventas por categoria).
+    std::map<std::string, ResumenCategoria> resumenPorCategoria;
 
     for (const Venta& venta : ventas_) {
         if (!venta.esDelDiaActual()) {
@@ -117,6 +120,25 @@ ReporteVentasDia GestorVentas::generarReporteDelDia() const {
             resumen.nombre = detalle.getNombreProducto();
             resumen.cantidadVendida += detalle.getCantidad();
             resumen.totalVendido += detalle.getSubtotal();
+
+            // La categoria se consulta en el Inventario ACTUAL (no se
+            // guardo un snapshot en DetalleVenta, a diferencia del nombre y
+            // el precio): si el producto ya no existe, o nunca tuvo
+            // categoria capturada, cae en el cubo "Sin categoria".
+            std::string categoria = "Sin categoria";
+            try {
+                const Producto& producto = inventario_.buscarPorCodigo(detalle.getCodigoProducto());
+                if (!producto.getCategoria().empty()) {
+                    categoria = producto.getCategoria();
+                }
+            } catch (const ProductoNoEncontrado&) {
+                // se queda con "Sin categoria".
+            }
+
+            ResumenCategoria& resumenCategoria = resumenPorCategoria[categoria];
+            resumenCategoria.categoria = categoria;
+            resumenCategoria.cantidadVendida += detalle.getCantidad();
+            resumenCategoria.totalVendido += detalle.getSubtotal();
         }
     }
 
@@ -132,6 +154,15 @@ ReporteVentasDia GestorVentas::generarReporteDelDia() const {
     std::sort(reporte.productosMasVendidos.begin(), reporte.productosMasVendidos.end(),
               [](const ResumenProducto& a, const ResumenProducto& b) {
                   return a.cantidadVendida > b.cantidadVendida;
+              });
+
+    reporte.ventasPorCategoria.reserve(resumenPorCategoria.size());
+    for (const auto& [categoria, resumen] : resumenPorCategoria) {
+        reporte.ventasPorCategoria.push_back(resumen);
+    }
+    std::sort(reporte.ventasPorCategoria.begin(), reporte.ventasPorCategoria.end(),
+              [](const ResumenCategoria& a, const ResumenCategoria& b) {
+                  return a.totalVendido > b.totalVendido;
               });
 
     return reporte;

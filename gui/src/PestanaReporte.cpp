@@ -1,8 +1,11 @@
 #include "PestanaReporte.h"
+#include "GraficaBarras.h"
 
+#include <QFrame>
 #include <QHeaderView>
 #include <QLabel>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QTableWidget>
 #include <QVBoxLayout>
 
@@ -42,6 +45,11 @@ PestanaReporte::PestanaReporte(const GestorVentas& gestorVentas, QWidget* padre)
     tablaTransacciones_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
     tablaTransacciones_->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
 
+    // La grafica no lleva boton ni pestana propia -- se repuebla junto con
+    // las tablas en actualizar(), asi que aparece "automaticamente" apenas
+    // se entra a esta pestana o se registra una venta nueva.
+    graficaCategorias_ = new GraficaBarras(this);
+
     auto* botonActualizar = new QPushButton("Actualizar", this);
     connect(botonActualizar, &QPushButton::clicked, this, &PestanaReporte::actualizar);
 
@@ -51,7 +59,15 @@ PestanaReporte::PestanaReporte(const GestorVentas& gestorVentas, QWidget* padre)
     auto* tituloTransacciones = new QLabel("Historial de transacciones:", this);
     tituloTransacciones->setProperty("clase", "titulo");
 
-    auto* layout = new QVBoxLayout(this);
+    auto* tituloCategorias = new QLabel("Ventas por categoria:", this);
+    tituloCategorias->setProperty("clase", "titulo");
+
+    // Con dos tablas mas la grafica, el contenido puede superar el alto
+    // de la ventana en pantallas chicas -- se envuelve todo en un
+    // QScrollArea (en vez de dejarlo suelto en `this`) para que aparezca
+    // una barra de desplazamiento vertical en vez de recortar contenido.
+    auto* contenido = new QWidget();
+    auto* layout = new QVBoxLayout(contenido);
     layout->addWidget(etiquetaTransacciones_);
     layout->addWidget(etiquetaTotal_);
     layout->addSpacing(8);
@@ -60,7 +76,19 @@ PestanaReporte::PestanaReporte(const GestorVentas& gestorVentas, QWidget* padre)
     layout->addSpacing(8);
     layout->addWidget(tituloTransacciones);
     layout->addWidget(tablaTransacciones_);
+    layout->addSpacing(8);
+    layout->addWidget(tituloCategorias);
+    layout->addWidget(graficaCategorias_);
     layout->addWidget(botonActualizar);
+
+    auto* areaDesplazable = new QScrollArea(this);
+    areaDesplazable->setWidget(contenido);
+    areaDesplazable->setWidgetResizable(true);
+    areaDesplazable->setFrameShape(QFrame::NoFrame);
+
+    auto* layoutPrincipal = new QVBoxLayout(this);
+    layoutPrincipal->setContentsMargins(0, 0, 0, 0);
+    layoutPrincipal->addWidget(areaDesplazable);
 
     actualizar();
 }
@@ -95,4 +123,15 @@ void PestanaReporte::actualizar() {
         tablaTransacciones_->setItem(fila, 3, new QTableWidgetItem(QString::number(t.cantidadProductos)));
         tablaTransacciones_->setItem(fila, 4, new QTableWidgetItem(QString::number(t.total, 'f', 2)));
     }
+
+    std::vector<GraficaBarras::Barra> barras;
+    barras.reserve(reporte.ventasPorCategoria.size());
+    for (const ResumenCategoria& c : reporte.ventasPorCategoria) {
+        GraficaBarras::Barra barra;
+        barra.etiqueta = QString::fromStdString(c.categoria);
+        barra.valor = c.totalVendido;
+        barra.valorTexto = QString("$%1").arg(c.totalVendido, 0, 'f', 2);
+        barras.push_back(barra);
+    }
+    graficaCategorias_->setDatos(std::move(barras));
 }

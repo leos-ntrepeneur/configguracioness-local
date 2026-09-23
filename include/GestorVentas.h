@@ -41,6 +41,17 @@ struct TransaccionDia {
     double total = 0.0;
 };
 
+// Fila de la grafica de ventas por categoria: cuanto se vendio de UNA
+// categoria, sumando todos los productos que pertenecen a ella. Un
+// producto sin categoria capturada (Producto::getCategoria() vacio), o
+// que ya se elimino del inventario despues de venderse, cae en el mismo
+// cubo "Sin categoria" -- no vale la pena distinguir ambos casos aqui.
+struct ResumenCategoria {
+    std::string categoria;
+    int cantidadVendida = 0;
+    double totalVendido = 0.0;
+};
+
 // Resultado completo del reporte de ventas del dia (Requisito 5).
 struct ReporteVentasDia {
     int numeroTransacciones = 0;
@@ -49,6 +60,10 @@ struct ReporteVentasDia {
     std::vector<ResumenProducto> productosMasVendidos;
     // Ordenado cronologicamente, una fila por venta (ver TransaccionDia).
     std::vector<TransaccionDia> transacciones;
+    // Ordenado de mayor a menor total vendido -- es lo que alimenta la
+    // grafica de barras de ventas por categoria (consola: barras ASCII;
+    // GUI: GraficaBarras).
+    std::vector<ResumenCategoria> ventasPorCategoria;
 };
 
 class GestorVentas {

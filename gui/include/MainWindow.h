@@ -11,7 +11,9 @@
 #include <QMainWindow>
 #include <memory>
 
+#include "GestorCortes.h"
 #include "GestorVentas.h"
+#include "IRepositorioCortes.h"
 #include "IRepositorioInformacionNegocio.h"
 #include "IRepositorioProductos.h"
 #include "IRepositorioVentas.h"
@@ -23,6 +25,7 @@ class PestanaProductos;
 class PestanaVentas;
 class PestanaReporte;
 class PestanaInformacionNegocio;
+class PestanaCortes;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -49,6 +52,12 @@ private:
     // separado, asi que MainWindow hace ese papel de punto de ensamblaje.
     Inventario inventario_;
     GestorVentas gestorVentas_;
+    // GestorCortes solo necesita GestorVentas (para generarReporteDelDia()
+    // al cerrar el dia), pero igual vive aqui y no dentro de GestorVentas:
+    // "cerrar el dia" es un concepto distinto de "registrar una venta", y
+    // separarlos evita que GestorVentas crezca con responsabilidades que
+    // no le tocan.
+    GestorCortes gestorCortes_;
     // Igual que InformacionNegocio en Menu (consola): un solo registro
     // chico, se mantiene en memoria y se guarda por su repositorio cuando
     // el usuario la edita en PestanaInformacionNegocio.
@@ -57,12 +66,14 @@ private:
     std::unique_ptr<IRepositorioProductos> repositorioProductos_;
     std::unique_ptr<IRepositorioVentas> repositorioVentas_;
     std::unique_ptr<IRepositorioInformacionNegocio> repositorioInformacionNegocio_;
+    std::unique_ptr<IRepositorioCortes> repositorioCortes_;
 
     QTabWidget* tabs_;
     PestanaProductos* pestanaProductos_;
     PestanaVentas* pestanaVentas_;
     PestanaReporte* pestanaReporte_;
     PestanaInformacionNegocio* pestanaInformacionNegocio_;
+    PestanaCortes* pestanaCortes_;
 };
 
 #endif // MAIN_WINDOW_H

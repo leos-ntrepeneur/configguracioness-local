@@ -7,9 +7,11 @@
 
 #include <memory>
 
+#include "GestorCortes.h"
 #include "GestorVentas.h"
 #include "Inventario.h"
 #include "Menu.h"
+#include "RepositorioCortesCsv.h"
 #include "RepositorioInformacionNegocioCsv.h"
 #include "RepositorioProductosCsv.h"
 #include "RepositorioVentasCsv.h"
@@ -17,6 +19,7 @@
 int main() {
     Inventario inventario;
     GestorVentas gestorVentas(inventario);
+    GestorCortes gestorCortes(gestorVentas);
 
     // std::unique_ptr<Interfaz> es el reemplazo moderno de un puntero
     // crudo (Interfaz*) a un objeto creado con `new`: es dueno exclusivo
@@ -32,6 +35,8 @@ int main() {
         std::make_unique<RepositorioVentasCsv>("data/ventas.csv");
     std::unique_ptr<IRepositorioInformacionNegocio> repositorioInformacionNegocio =
         std::make_unique<RepositorioInformacionNegocioCsv>("data/negocio.csv");
+    std::unique_ptr<IRepositorioCortes> repositorioCortes =
+        std::make_unique<RepositorioCortesCsv>("data/cortes.csv");
 
     // Carga inicial: si es la primera vez que se ejecuta el programa y los
     // archivos todavia no existen, cargarTodos()/cargarTodas() devuelven
@@ -39,11 +44,13 @@ int main() {
     // "en frio".
     inventario.cargarProductos(repositorioProductos->cargarTodos());
     gestorVentas.cargarVentas(repositorioVentas->cargarTodas());
+    gestorCortes.cargarCortes(repositorioCortes->cargarTodos());
 
     // `*repositorioProductos` desreferencia el unique_ptr para obtener una
     // IRepositorioProductos& (Menu no necesita ser dueno del repositorio,
     // solo usarlo, igual que con inventario/gestorVentas).
-    Menu menu(inventario, gestorVentas, *repositorioProductos, *repositorioVentas, *repositorioInformacionNegocio);
+    Menu menu(inventario, gestorVentas, gestorCortes, *repositorioProductos, *repositorioVentas,
+              *repositorioInformacionNegocio, *repositorioCortes);
     menu.ejecutar();
     return 0;
 }

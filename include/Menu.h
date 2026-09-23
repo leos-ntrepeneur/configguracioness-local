@@ -12,7 +12,10 @@
 #include <string>
 #include <vector>
 
+#include "CorteCaja.h"
+#include "GestorCortes.h"
 #include "GestorVentas.h"
+#include "IRepositorioCortes.h"
 #include "IRepositorioInformacionNegocio.h"
 #include "IRepositorioProductos.h"
 #include "IRepositorioVentas.h"
@@ -35,9 +38,11 @@ public:
     // si por debajo es un CSV o, mas adelante, una base SQLite.
     Menu(Inventario& inventario,
          GestorVentas& gestorVentas,
+         GestorCortes& gestorCortes,
          IRepositorioProductos& repositorioProductos,
          IRepositorioVentas& repositorioVentas,
-         IRepositorioInformacionNegocio& repositorioInformacionNegocio);
+         IRepositorioInformacionNegocio& repositorioInformacionNegocio,
+         IRepositorioCortes& repositorioCortes);
 
     // Punto de entrada: corre el bucle principal hasta que el usuario
     // elige salir.
@@ -60,8 +65,24 @@ private:
     // para poder distinguir una venta de otra en vez de solo ver el total
     // sumado por producto.
     void mostrarHistorialTransacciones(const std::vector<TransaccionDia>& transacciones) const;
+    // Grafica de barras (con caracteres de texto) de ventas por categoria,
+    // como parte del reporte -- se imprime siempre que se ve el reporte,
+    // sin pedirla aparte (ver GraficaBarras.h en la GUI para el
+    // equivalente grafico).
+    void mostrarGraficaVentasPorCategoria(const std::vector<ResumenCategoria>& ventasPorCategoria) const;
 
     void alConfigurarInformacionNegocio();
+
+    // --- Cortes de caja (cierre diario) ---
+    // Pide confirmacion (es un registro permanente, no se puede deshacer),
+    // genera el corte a partir del reporte de ventas vigente, lo persiste
+    // y muestra su detalle -- mismo flujo que confirmarVenta()+ticket, pero
+    // para el resumen del dia completo en vez de una sola venta.
+    void alCerrarDia();
+    // Lista los cortes ya generados (tabla resumen) y opcionalmente
+    // muestra el detalle completo de uno de ellos.
+    void alVerCortesAnteriores() const;
+    void mostrarTablaCortes(const std::vector<CorteCaja>& cortes) const;
 
     // Compartida por alListarProductos() y alBuscarProducto() para no
     // duplicar el formato de tabla en dos lugares.
@@ -90,9 +111,11 @@ private:
 
     Inventario& inventario_;
     GestorVentas& gestorVentas_;
+    GestorCortes& gestorCortes_;
     IRepositorioProductos& repositorioProductos_;
     IRepositorioVentas& repositorioVentas_;
     IRepositorioInformacionNegocio& repositorioInformacionNegocio_;
+    IRepositorioCortes& repositorioCortes_;
     // A diferencia de Inventario/GestorVentas (colecciones grandes que
     // viven fuera de Menu), la InformacionNegocio es un solo registro
     // chico: Menu la mantiene en memoria directamente y la guarda a

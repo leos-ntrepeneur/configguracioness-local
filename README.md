@@ -49,12 +49,17 @@ inventario-pos/
 │   ├── GestorVentas.h
 │   ├── InformacionNegocio.h        # Datos del local para el encabezado del ticket
 │   ├── GeneradorTicket.h           # Arma el texto plano del ticket (consola Y GUI)
+│   ├── CorteCaja.h                 # Snapshot permanente del resumen de ventas al cerrar el dia
+│   ├── GestorCortes.h              # Asigna numero de corte y arma cada CorteCaja
+│   ├── GeneradorCorte.h            # Arma el texto plano del corte (consola Y GUI)
 │   ├── IRepositorioProductos.h     # Interfaz de persistencia de productos
 │   ├── IRepositorioVentas.h        # Interfaz de persistencia de ventas
 │   ├── IRepositorioInformacionNegocio.h  # Interfaz de persistencia de InformacionNegocio
+│   ├── IRepositorioCortes.h        # Interfaz de persistencia de CorteCaja (solo agrega filas)
 │   ├── RepositorioProductosCsv.h   # Implementacion CSV de la interfaz
 │   ├── RepositorioVentasCsv.h      # Implementacion CSV de la interfaz
 │   ├── RepositorioInformacionNegocioCsv.h  # Implementacion CSV de la interfaz
+│   ├── RepositorioCortesCsv.h      # Implementacion CSV append-only de la interfaz
 │   ├── CsvUtil.h                   # Parseo de lineas CSV (helper compartido)
 │   ├── ValidacionTexto.h           # Validacion de texto "seguro para CSV", compartida
 │   ├── Menu.h                      # Solo lo usa la consola
@@ -69,9 +74,13 @@ inventario-pos/
 │   ├── GestorVentas.cpp
 │   ├── InformacionNegocio.cpp
 │   ├── GeneradorTicket.cpp
+│   ├── CorteCaja.cpp
+│   ├── GestorCortes.cpp
+│   ├── GeneradorCorte.cpp
 │   ├── RepositorioProductosCsv.cpp
 │   ├── RepositorioVentasCsv.cpp
 │   ├── RepositorioInformacionNegocioCsv.cpp
+│   ├── RepositorioCortesCsv.cpp
 │   ├── CsvUtil.cpp
 │   ├── ValidacionTexto.cpp
 │   ├── Menu.cpp
@@ -83,10 +92,12 @@ inventario-pos/
 │   │   ├── MainWindow.h            # Ventana principal (dueña de Inventario/GestorVentas/repos)
 │   │   ├── PestanaProductos.h      # Pestaña "Productos": tabla + alta/edicion/baja
 │   │   ├── PestanaVentas.h         # Pestaña "Vender": productos disponibles + carrito
-│   │   ├── PestanaReporte.h        # Pestaña "Reporte del dia"
+│   │   ├── PestanaReporte.h        # Pestaña "Reporte del dia" (incluye grafica por categoria)
 │   │   ├── PestanaInformacionNegocio.h  # Pestaña "Mi negocio": datos para el ticket
+│   │   ├── PestanaCortes.h         # Pestaña "Cortes de caja": historial + cerrar el dia
+│   │   ├── GraficaBarras.h         # Widget generico de barras horizontales (QPainter, sin QtCharts)
 │   │   ├── ProductoDialog.h        # Formulario emergente de alta/edicion
-│   │   ├── TicketDialog.h          # Ventana emergente que muestra el ticket de una venta
+│   │   ├── TicketDialog.h          # Ventana emergente: ticket de venta O corte de caja
 │   │   └── TemaOscuro.h            # Aplica paleta + hoja de estilo oscura
 │   ├── src/                        # Implementaciones .cpp + main_gui.cpp
 │   └── resources/
@@ -145,16 +156,38 @@ inventario-pos/
   (`include`/`src`, no en `gui/`) precisamente para que la consola
   (`std::cout`) y la GUI (`TicketDialog`) impriman **exactamente el mismo
   texto** sin duplicar ni una línea de formato.
-- **IRepositorioProductos / IRepositorioVentas / IRepositorioInformacionNegocio**:
+- **CorteCaja**: una fotografía PERMANENTE del resumen de ventas del día
+  en el momento de cerrarlo (también llamado "cierre del día"): número de
+  corte, folio inicial/final incluidos, número de transacciones, total
+  vendido y el desglose por método de pago (efectivo/tarjeta de
+  crédito/tarjeta de débito). A diferencia de `ReporteVentasDia` (que se
+  recalcula cada vez y siempre refleja "hoy hasta ahora"), un `CorteCaja`
+  queda archivado tal cual estaba al cerrarse — es un registro contable,
+  no una consulta en vivo. Solo guarda totales, no el detalle por
+  producto/categoría (`ventas.csv` ya tiene eso, folio por folio).
+- **GestorCortes**: le asigna a cada `CorteCaja` su número de corte
+  (correlativo, mismo patrón que el folio de `Venta`) y mantiene el
+  historial en memoria. `cerrarDia()` arma el corte a partir del
+  `ReporteVentasDia` vigente; la persistencia queda a cargo de quien
+  llama (`Menu`/`MainWindow`), igual que con `GestorVentas::registrarVenta`.
+- **GeneradorCorte**: función libre `generarTextoCorte(corte, info)`,
+  misma idea que `GeneradorTicket` pero para el resumen de cierre.
+- **IRepositorioProductos / IRepositorioVentas / IRepositorioInformacionNegocio / IRepositorioCortes**:
   interfaces (clases abstractas con métodos virtuales puros) para
   guardar/cargar datos. Implementadas hoy por `RepositorioProductosCsv` /
-  `RepositorioVentasCsv` / `RepositorioInformacionNegocioCsv`; migrar a
-  SQLite implicaría solo escribir una nueva clase que herede de estas
-  interfaces, sin tocar `Menu`, `Inventario` ni `GestorVentas`.
+  `RepositorioVentasCsv` / `RepositorioInformacionNegocioCsv` /
+  `RepositorioCortesCsv`; migrar a SQLite implicaría solo escribir una
+  nueva clase que herede de estas interfaces, sin tocar `Menu`,
+  `Inventario` ni `GestorVentas`. `IRepositorioCortes` es distinta de las
+  demás: su método es `agregar` (una fila a la vez), no `guardarTodos`
+  (todo el archivo reescrito) — un corte cerrado nunca se modifica, así
+  que la implementación en CSV solo necesita abrir el archivo en modo
+  *append*.
 - **Menu**: capa de presentación (menús de consola, incluido el flujo de
-  carrito para registrar una venta, la pregunta de método de pago y la
-  edición de `InformacionNegocio`). No contiene lógica de negocio ni de
-  persistencia, solo las invoca y maneja errores con `try/catch`.
+  carrito para registrar una venta, la pregunta de método de pago, la
+  edición de `InformacionNegocio` y el cierre/consulta de cortes de
+  caja). No contiene lógica de negocio ni de persistencia, solo las
+  invoca y maneja errores con `try/catch`.
 - **Excepciones**: `ProductoNoEncontrado`, `CodigoDuplicado`,
   `StockInsuficiente`, `EntradaInvalida`, `FinDeEntrada` — errores de
   negocio como excepciones en vez de códigos de retorno.
@@ -167,9 +200,9 @@ inventario-pos/
 ### Clases de la interfaz gráfica (`gui/`)
 
 - **MainWindow**: cumple el mismo papel que `main.cpp` + `Menu` en la
-  consola — es dueña de `Inventario`, `GestorVentas`, `InformacionNegocio`
-  y los repositorios, arma las 4 pestañas y conecta sus señales
-  (`datosModificados()`) para guardar en disco y refrescar
+  consola — es dueña de `Inventario`, `GestorVentas`, `GestorCortes`,
+  `InformacionNegocio` y los repositorios, arma las 5 pestañas y conecta
+  sus señales (`datosModificados()`) para guardar en disco y refrescar
   automáticamente.
 - **PestanaProductos**: tabla de productos + búsqueda + botones
   Nuevo/Editar/Eliminar, con las filas de stock bajo resaltadas.
@@ -179,20 +212,35 @@ inventario-pos/
   venta (con su folio y método de pago) y muestra el ticket en un
   `TicketDialog`.
 - **PestanaReporte**: totales y ranking de productos más vendidos del día,
-  más una tabla de "Historial de transacciones" (folio, hora, método de
-  pago y total de cada venta individual) para poder distinguir dos ventas
-  del mismo producto entre sí.
+  una tabla de "Historial de transacciones" (folio, hora, método de pago
+  y total de cada venta individual) para poder distinguir dos ventas del
+  mismo producto entre sí, y una **gráfica de ventas por categoría**
+  (`GraficaBarras`) que se repuebla sola cada vez que el reporte se
+  actualiza — no hace falta pedirla aparte.
 - **PestanaInformacionNegocio** ("Mi negocio"): formulario para capturar
-  los datos del local que aparecen en el ticket. Recibe la
+  los datos del local que aparecen en el ticket/corte. Recibe la
   `InformacionNegocio` de `MainWindow` **por referencia** (no una copia):
-  al guardar, `PestanaVentas` ve los datos nuevos de inmediato en el
-  siguiente ticket, sin necesidad de reiniciar la aplicación.
+  al guardar, `PestanaVentas`/`PestanaCortes` ven los datos nuevos de
+  inmediato en el siguiente ticket o corte, sin necesidad de reiniciar la
+  aplicación.
+- **PestanaCortes** ("Cortes de caja"): tabla con el historial de cierres
+  ya generados (doble clic en una fila reabre su detalle completo) más un
+  botón "Cerrar el día", que pide confirmación (es un registro
+  permanente) y muestra el corte recién generado reutilizando
+  `TicketDialog`.
+- **GraficaBarras**: widget genérico de barras horizontales dibujado a
+  mano con `QPainter` (degradado teal, igual que los botones) en vez de
+  depender del módulo QtCharts, que no siempre viene instalado junto con
+  Qt Widgets. No sabe nada de ventas ni categorías — solo recibe pares
+  (etiqueta, valor) ya calculados.
 - **ProductoDialog**: formulario emergente reutilizado tanto para alta
   como para edición.
-- **TicketDialog**: ventana emergente de solo lectura que muestra el texto
-  del ticket (generado por `GeneradorTicket`, el mismo que usa la
-  consola) en una fuente monoespaciada, dimensionada con `QFontMetrics`
-  para que las 40 columnas del ticket siempre quepan sin recortarse.
+- **TicketDialog**: ventana emergente de solo lectura que muestra un
+  bloque de texto preformateado en fuente monoespaciada, dimensionada con
+  `QFontMetrics` para que las 40 columnas siempre quepan sin recortarse.
+  Un solo diálogo sirve tanto para el ticket de una venta
+  (`GeneradorTicket`) como para el corte de caja (`GeneradorCorte`) — el
+  título de la ventana es el único parámetro que cambia.
 - **TemaOscuro**: aplica el tema oscuro completo en un solo lugar —
   combina una `QPalette` oscura (para lo que Qt dibuja "a mano", como las
   flechitas de un spinbox o el atenuado de campos deshabilitados) con la
@@ -272,6 +320,51 @@ editar.
   deliberadamente NO se valida contra el formato real del SAT ni habilita
   facturación electrónica (CFDI). Es un campo para que el ticket se vea
   completo, no el punto de partida de un módulo de facturación.
+
+### Ventas por categoría (gráfica automática)
+
+- `GestorVentas::generarReporteDelDia()` agrupa las ventas del día también
+  por **categoría** de producto (`ResumenCategoria`), ordenado de mayor a
+  menor total vendido. Un producto sin categoría capturada, o que ya se
+  eliminó del inventario después de venderse, cae en el cubo "Sin
+  categoría".
+- Esta agrupación alimenta una **gráfica de barras** que aparece
+  automáticamente como parte del reporte, sin que el usuario tenga que
+  pedirla aparte: en la consola son barras dibujadas con caracteres de
+  texto (`Menu::mostrarGraficaVentasPorCategoria`); en la GUI es el widget
+  `GraficaBarras` (dibujado a mano con `QPainter`, con el mismo degradado
+  teal que el resto de la interfaz), que se repuebla solo cada vez que
+  `PestanaReporte::actualizar()` se ejecuta.
+
+### Cortes de caja (cierre diario)
+
+- Un **corte de caja** (o "cierre del día") es un resumen de ventas
+  **permanente**: a diferencia del reporte del día (que se recalcula cada
+  vez y siempre refleja "hoy hasta ahora"), un corte queda archivado tal
+  cual estaba al momento de cerrarse, con su propio número de corte
+  correlativo. Consola: menú "Cerrar el día (corte de caja)". GUI: pestaña
+  "Cortes de caja", botón "Cerrar el día".
+- Cerrar el día pide **confirmación** primero (es un registro permanente
+  que no se puede deshacer y no modifica las ventas ya registradas), y
+  después genera el corte a partir del reporte de ventas vigente: folio
+  inicial/final incluidos, número de transacciones, total vendido y el
+  desglose por método de pago (efectivo / tarjeta de crédito / tarjeta de
+  débito). El texto del corte lo arma `GeneradorCorte::generarTextoCorte`
+  (mismo formato de 40 columnas que el ticket, reutilizando
+  `InformacionNegocio` para el encabezado) y se muestra igual en consola
+  (`std::cout`) y en GUI (reutilizando `TicketDialog`).
+- Se puede cerrar el día más de una vez en la misma sesión (por ejemplo,
+  un corte parcial a medio día y el corte final al terminar) — cada
+  llamada genera un registro nuevo e independiente, ninguno modifica ni
+  invalida al anterior.
+- **Persistencia append-only:** a diferencia de `productos.csv`/
+  `ventas.csv` (que se reescriben completos cada vez que algo cambia),
+  `data/cortes.csv` solo recibe filas nuevas al final
+  (`RepositorioCortesCsv::agregar`, abre el archivo en modo *append*) — un
+  corte cerrado es un registro contable, nunca se modifica ni se borra.
+  Solo se guardan los totales, no el detalle por producto/categoría/
+  transacción individual (`ventas.csv` ya tiene ese detalle completo,
+  folio por folio, si algún día hiciera falta reconstruirlo).
 
 ## Cómo compilar y ejecutar (Windows)
 
@@ -374,10 +467,10 @@ de CMake de Visual Studio.
    **`inventario_pos_gui`** (no `inventario_pos`, ese es la consola).
 2. Presiona el botón verde ▷ (o `Ctrl+R`).
 
-Se abre la ventana con las 4 pestañas (Productos / Vender / Reporte del
-día / Mi negocio). Los datos se guardan igual que en consola, en
-`data/productos.csv`, `data/ventas.csv` y `data/negocio.csv` junto al
-ejecutable.
+Se abre la ventana con las 5 pestañas (Productos / Vender / Reporte del
+día / Mi negocio / Cortes de caja). Los datos se guardan igual que en
+consola, en `data/productos.csv`, `data/ventas.csv`, `data/negocio.csv` y
+`data/cortes.csv` junto al ejecutable.
 
 ### Alternativa: Visual Studio
 
