@@ -19,10 +19,15 @@ set(CORE_SOURCES
     src/Inventario.cpp
     src/DetalleVenta.cpp
     src/Venta.cpp
+    src/MetodoPago.cpp
     src/GestorVentas.cpp
     src/CsvUtil.cpp
+    src/ValidacionTexto.cpp
     src/RepositorioProductosCsv.cpp
     src/RepositorioVentasCsv.cpp
+    src/InformacionNegocio.cpp
+    src/RepositorioInformacionNegocioCsv.cpp
+    src/GeneradorTicket.cpp
 )
 
 set(CONSOLE_SOURCES

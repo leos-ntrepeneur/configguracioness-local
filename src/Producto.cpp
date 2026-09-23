@@ -1,35 +1,10 @@
 #include "Producto.h"
 #include "Excepciones.h"
+#include "ValidacionTexto.h"
 
 #include <cmath>
 
 namespace {
-
-// El inventario se persiste en CSV (ver RepositorioProductosCsv), donde la
-// coma es el separador de campos y el salto de linea separa filas. Un
-// caracter de control (codigo ASCII menor a 0x20: salto de linea, retorno
-// de carro, tabulador...) que se cuele en nombre/categoria/codigo puede
-// romper la estructura del archivo al guardar -- una fila terminaria a la
-// mitad y la siguiente carga leeria datos con las columnas desalineadas.
-// Tambien evita "inyectar" secuencias de control en la salida de consola.
-// Ademas limitamos el largo: nada en el nombre de un articulo de
-// ferreteria necesita mas de 100 caracteres, y evita que un dato
-// absurdamente largo (por accidente o a proposito) infle el archivo o
-// rompa el ancho de columnas de la tabla en la GUI.
-void validarTexto(const std::string& valor, const std::string& nombreCampo, std::size_t longitudMaxima) {
-    if (valor.find(',') != std::string::npos) {
-        throw EntradaInvalida(nombreCampo + " no puede contener comas.");
-    }
-    for (unsigned char c : valor) {
-        if (c < 0x20) {
-            throw EntradaInvalida(nombreCampo + " no puede contener saltos de linea ni caracteres de control.");
-        }
-    }
-    if (valor.size() > longitudMaxima) {
-        throw EntradaInvalida(nombreCampo + " no puede tener mas de " +
-                               std::to_string(longitudMaxima) + " caracteres.");
-    }
-}
 
 // Valida un precio: no negativo, dentro de un rango de negocio razonable,
 // y "finito". IMPORTANTE: std::cin >> double (usado en la consola) acepta
@@ -89,9 +64,9 @@ Producto::Producto(std::string codigo,
     if (nombre_.empty()) {
         throw EntradaInvalida("El nombre del producto no puede estar vacio.");
     }
-    validarTexto(codigo_, "El codigo", CODIGO_LONGITUD_MAXIMA);
-    validarTexto(nombre_, "El nombre", NOMBRE_LONGITUD_MAXIMA);
-    validarTexto(categoria_, "La categoria", CATEGORIA_LONGITUD_MAXIMA);
+    validacion::validarTextoSeguro(codigo_, "El codigo", CODIGO_LONGITUD_MAXIMA);
+    validacion::validarTextoSeguro(nombre_, "El nombre", NOMBRE_LONGITUD_MAXIMA);
+    validacion::validarTextoSeguro(categoria_, "La categoria", CATEGORIA_LONGITUD_MAXIMA);
     validarPrecio(precio_);
     validarStock(stock_, "El stock");
     validarStock(stockMinimo_, "El stock minimo");
@@ -108,7 +83,7 @@ void Producto::setNombre(std::string nombre) {
     if (nombre.empty()) {
         throw EntradaInvalida("El nombre del producto no puede estar vacio.");
     }
-    validarTexto(nombre, "El nombre", NOMBRE_LONGITUD_MAXIMA);
+    validacion::validarTextoSeguro(nombre, "El nombre", NOMBRE_LONGITUD_MAXIMA);
     nombre_ = std::move(nombre);
 }
 
@@ -118,7 +93,7 @@ void Producto::setPrecio(double precio) {
 }
 
 void Producto::setCategoria(std::string categoria) {
-    validarTexto(categoria, "La categoria", CATEGORIA_LONGITUD_MAXIMA);
+    validacion::validarTextoSeguro(categoria, "La categoria", CATEGORIA_LONGITUD_MAXIMA);
     categoria_ = std::move(categoria);
 }
 

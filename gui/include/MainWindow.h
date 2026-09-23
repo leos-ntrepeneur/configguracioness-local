@@ -12,14 +12,17 @@
 #include <memory>
 
 #include "GestorVentas.h"
+#include "IRepositorioInformacionNegocio.h"
 #include "IRepositorioProductos.h"
 #include "IRepositorioVentas.h"
+#include "InformacionNegocio.h"
 #include "Inventario.h"
 
 class QTabWidget;
 class PestanaProductos;
 class PestanaVentas;
 class PestanaReporte;
+class PestanaInformacionNegocio;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -46,14 +49,20 @@ private:
     // separado, asi que MainWindow hace ese papel de punto de ensamblaje.
     Inventario inventario_;
     GestorVentas gestorVentas_;
+    // Igual que InformacionNegocio en Menu (consola): un solo registro
+    // chico, se mantiene en memoria y se guarda por su repositorio cuando
+    // el usuario la edita en PestanaInformacionNegocio.
+    InformacionNegocio informacionNegocio_;
 
     std::unique_ptr<IRepositorioProductos> repositorioProductos_;
     std::unique_ptr<IRepositorioVentas> repositorioVentas_;
+    std::unique_ptr<IRepositorioInformacionNegocio> repositorioInformacionNegocio_;
 
     QTabWidget* tabs_;
     PestanaProductos* pestanaProductos_;
     PestanaVentas* pestanaVentas_;
     PestanaReporte* pestanaReporte_;
+    PestanaInformacionNegocio* pestanaInformacionNegocio_;
 };
 
 #endif // MAIN_WINDOW_H

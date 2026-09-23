@@ -1,7 +1,9 @@
 #include "MainWindow.h"
+#include "PestanaInformacionNegocio.h"
 #include "PestanaProductos.h"
 #include "PestanaReporte.h"
 #include "PestanaVentas.h"
+#include "RepositorioInformacionNegocioCsv.h"
 #include "RepositorioProductosCsv.h"
 #include "RepositorioVentasCsv.h"
 
@@ -13,7 +15,8 @@ MainWindow::MainWindow(QWidget* padre)
     : QMainWindow(padre),
       gestorVentas_(inventario_),
       repositorioProductos_(std::make_unique<RepositorioProductosCsv>("data/productos.csv")),
-      repositorioVentas_(std::make_unique<RepositorioVentasCsv>("data/ventas.csv")) {
+      repositorioVentas_(std::make_unique<RepositorioVentasCsv>("data/ventas.csv")),
+      repositorioInformacionNegocio_(std::make_unique<RepositorioInformacionNegocioCsv>("data/negocio.csv")) {
     setWindowTitle("Inventario POS");
     // Tamaño inicial mas grande, a tono con la fuente mas grande del tema
     // (ver style.qss): con la ventana chica de antes, la tabla de
@@ -28,15 +31,19 @@ MainWindow::MainWindow(QWidget* padre)
     // vectores vacios en vez de fallar.
     inventario_.cargarProductos(repositorioProductos_->cargarTodos());
     gestorVentas_.cargarVentas(repositorioVentas_->cargarTodas());
+    informacionNegocio_ = repositorioInformacionNegocio_->cargar();
 
     tabs_ = new QTabWidget(this);
     pestanaProductos_ = new PestanaProductos(inventario_, tabs_);
-    pestanaVentas_ = new PestanaVentas(inventario_, gestorVentas_, tabs_);
+    pestanaVentas_ = new PestanaVentas(inventario_, gestorVentas_, informacionNegocio_, tabs_);
     pestanaReporte_ = new PestanaReporte(gestorVentas_, tabs_);
+    pestanaInformacionNegocio_ =
+        new PestanaInformacionNegocio(informacionNegocio_, *repositorioInformacionNegocio_, tabs_);
 
     tabs_->addTab(pestanaProductos_, "Productos");
     tabs_->addTab(pestanaVentas_, "Vender");
     tabs_->addTab(pestanaReporte_, "Reporte del dia");
+    tabs_->addTab(pestanaInformacionNegocio_, "Mi negocio");
     setCentralWidget(tabs_);
 
     statusBar()->showMessage("Datos cargados desde data/productos.csv y data/ventas.csv", 5000);

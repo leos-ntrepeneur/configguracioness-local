@@ -1,5 +1,6 @@
 #include "PestanaVentas.h"
 
+#include <QComboBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
@@ -12,6 +13,8 @@
 #include <QVBoxLayout>
 
 #include "Excepciones.h"
+#include "GeneradorTicket.h"
+#include "TicketDialog.h"
 
 namespace {
 constexpr int COL_PROD_CODIGO = 0;
@@ -25,8 +28,9 @@ constexpr int COL_CARR_CANTIDAD = 2;
 constexpr int COL_CARR_SUBTOTAL = 3;
 } // namespace
 
-PestanaVentas::PestanaVentas(Inventario& inventario, GestorVentas& gestorVentas, QWidget* padre)
-    : QWidget(padre), inventario_(inventario), gestorVentas_(gestorVentas) {
+PestanaVentas::PestanaVentas(Inventario& inventario, GestorVentas& gestorVentas,
+                              const InformacionNegocio& informacionNegocio, QWidget* padre)
+    : QWidget(padre), inventario_(inventario), gestorVentas_(gestorVentas), informacionNegocio_(informacionNegocio) {
     // --- Panel izquierdo: productos disponibles ---
     campoBusqueda_ = new QLineEdit(this);
     campoBusqueda_->setPlaceholderText("Buscar por nombre o codigo...");
@@ -75,7 +79,17 @@ PestanaVentas::PestanaVentas(Inventario& inventario, GestorVentas& gestorVentas,
     etiquetaTotal_ = new QLabel("Total: $0.00", this);
     // Color de acento para que el total salte a la vista, como en
     // cualquier ticket de venta moderno.
-    etiquetaTotal_->setStyleSheet("font-family: 'Manrope'; font-weight: 800; font-size: 19px; color: #6b76f5;");
+    etiquetaTotal_->setStyleSheet("font-family: 'Manrope'; font-weight: 800; font-size: 19px; color: #2dd4bf;");
+
+    // Mismas 3 opciones que Menu::preguntarMetodoPago() en la consola,
+    // en el mismo orden -- el indice del combo (0/1/2) se traduce
+    // directo al enum MetodoPago en alConfirmarVenta().
+    auto* etiquetaMetodoPago = new QLabel("Metodo de pago:", this);
+    comboMetodoPago_ = new QComboBox(this);
+    comboMetodoPago_->addItem("Efectivo");
+    comboMetodoPago_->addItem("Tarjeta de credito");
+    comboMetodoPago_->addItem("Tarjeta de debito");
+
     botonConfirmar_ = new QPushButton("Confirmar venta", this);
     botonConfirmar_->setProperty("clase", "primario");
 
@@ -88,6 +102,8 @@ PestanaVentas::PestanaVentas(Inventario& inventario, GestorVentas& gestorVentas,
     layoutDerecho->addWidget(tablaCarrito_);
     layoutDerecho->addWidget(botonQuitar_);
     layoutDerecho->addWidget(etiquetaTotal_);
+    layoutDerecho->addWidget(etiquetaMetodoPago);
+    layoutDerecho->addWidget(comboMetodoPago_);
     layoutDerecho->addWidget(botonConfirmar_);
 
     // QSplitter deja al usuario arrastrar la division entre los dos
@@ -264,25 +280,40 @@ void PestanaVentas::alConfirmarVenta() {
             detalles.emplace_back(codigo, producto.getNombre(), cantidad, producto.getPrecio());
         }
 
-        const Venta& venta = gestorVentas_.registrarVenta(detalles);
+        // El indice del combo (0/1/2) coincide con el orden en que se
+        // agregaron sus opciones arriba en el constructor.
+        MetodoPago metodoPago = MetodoPago::Efectivo;
+        switch (comboMetodoPago_->currentIndex()) {
+            case 0: metodoPago = MetodoPago::Efectivo; break;
+            case 1: metodoPago = MetodoPago::TarjetaCredito; break;
+            case 2: metodoPago = MetodoPago::TarjetaDebito; break;
+            default: break;
+        }
 
-        QString resumen = QString("Venta registrada.\nFecha: %1\nTotal: $%2")
-                               .arg(QString::fromStdString(venta.fechaComoTexto()))
-                               .arg(venta.getTotal(), 0, 'f', 2);
+        const Venta& venta = gestorVentas_.registrarVenta(detalles, metodoPago);
 
         // Igual que en consola: avisar de inmediato si algun producto
-        // vendido quedo con stock bajo (Requisito 4).
+        // vendido quedo con stock bajo (Requisito 4), antes de mostrar el
+        // ticket para que el aviso no se pierda de vista.
+        QString avisos;
         for (const DetalleVenta& detalle : venta.getDetalles()) {
             const Producto& actualizado = inventario_.buscarPorCodigo(detalle.getCodigoProducto());
             if (actualizado.estaBajoStockMinimo()) {
-                resumen += QString("\n\nAVISO: %1 quedo con stock bajo (%2 unidades, minimo %3).")
-                               .arg(QString::fromStdString(actualizado.getNombre()))
-                               .arg(actualizado.getStock())
-                               .arg(actualizado.getStockMinimo());
+                avisos += QString("\nAVISO: %1 quedo con stock bajo (%2 unidades, minimo %3).")
+                              .arg(QString::fromStdString(actualizado.getNombre()))
+                              .arg(actualizado.getStock())
+                              .arg(actualizado.getStockMinimo());
             }
         }
+        if (!avisos.isEmpty()) {
+            QMessageBox::warning(this, "Venta confirmada", avisos.trimmed());
+        }
 
-        QMessageBox::information(this, "Venta confirmada", resumen);
+        // El ticket (mismo texto que genera la consola, ver GeneradorTicket.h)
+        // se muestra en su propio dialogo, con fuente monoespaciada para que
+        // el alineado se vea correcto.
+        TicketDialog dialogoTicket(generarTextoTicket(venta, informacionNegocio_), this);
+        dialogoTicket.exec();
 
         carrito_.clear();
         actualizarCarrito();

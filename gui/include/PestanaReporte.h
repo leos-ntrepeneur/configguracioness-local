@@ -32,6 +32,11 @@ private:
     QLabel* etiquetaTransacciones_;
     QLabel* etiquetaTotal_;
     QTableWidget* tablaProductos_;
+    // Tabla de transacciones individuales del dia (folio, hora, metodo de
+    // pago, total) -- es lo que hacia falta para distinguir dos ventas del
+    // mismo producto entre si, en vez de solo ver el total sumado por
+    // producto en tablaProductos_.
+    QTableWidget* tablaTransacciones_;
 };
 
 #endif // PESTANA_REPORTE_H

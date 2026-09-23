@@ -57,13 +57,10 @@ void aplicarTemaOscuro(QApplication& app) {
     const QColor texto(227, 229, 232);       // #e3e5e8
     const QColor textoSecundario(148, 155, 164); // #949ba4
     const QColor textoDeshabilitado(106, 110, 120); // #6a6e78
-    const QColor acento(88, 101, 242);       // #5865f2
-    const QColor seleccion(20, 184, 166);    // #14b8a6 -- teal, deliberadamente
-                                              // distinto del azul-violeta de
-                                              // los botones (ver style.qss),
-                                              // para que "boton de accion" y
-                                              // "fila seleccionada" no se
-                                              // confundan al ser el mismo color.
+    // Un solo acento (teal) para TODO -- botones, foco, seleccion, pestaña
+    // activa -- en vez de mezclar azul con teal. Ver la escala completa
+    // documentada al inicio de style.qss.
+    const QColor acento(20, 184, 166);       // #14b8a6
 
     paleta.setColor(QPalette::Window, fondo);
     paleta.setColor(QPalette::WindowText, texto);
@@ -76,7 +73,7 @@ void aplicarTemaOscuro(QApplication& app) {
     paleta.setColor(QPalette::ButtonText, texto);
     paleta.setColor(QPalette::BrightText, QColor(237, 66, 69)); // #ed4245, para errores.
     paleta.setColor(QPalette::Link, acento);
-    paleta.setColor(QPalette::Highlight, seleccion);
+    paleta.setColor(QPalette::Highlight, acento);
     paleta.setColor(QPalette::HighlightedText, Qt::white);
 
     // El "grupo" Disabled son los colores que usa CUALQUIER widget cuando

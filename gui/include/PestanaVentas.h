@@ -13,18 +13,24 @@
 #include <string>
 
 #include "GestorVentas.h"
+#include "InformacionNegocio.h"
 #include "Inventario.h"
 
 class QLineEdit;
 class QTableWidget;
 class QLabel;
 class QPushButton;
+class QComboBox;
 
 class PestanaVentas : public QWidget {
     Q_OBJECT
 
 public:
-    PestanaVentas(Inventario& inventario, GestorVentas& gestorVentas, QWidget* padre = nullptr);
+    // `informacionNegocio` se recibe por referencia CONSTANTE: esta pestaña
+    // solo la LEE para armar el ticket al confirmar una venta, quien la
+    // edita es PestanaInformacionNegocio (via MainWindow, misma instancia).
+    PestanaVentas(Inventario& inventario, GestorVentas& gestorVentas,
+                  const InformacionNegocio& informacionNegocio, QWidget* padre = nullptr);
 
     // Se llama cuando otra pestana (Productos) modifico el inventario, para
     // que la lista de productos disponibles y sus precios/stock queden al
@@ -48,6 +54,7 @@ private:
 
     Inventario& inventario_;
     GestorVentas& gestorVentas_;
+    const InformacionNegocio& informacionNegocio_;
 
     // codigo -> cantidad acumulada, igual que en la version de consola.
     std::map<std::string, int> carrito_;
@@ -59,6 +66,9 @@ private:
     QTableWidget* tablaCarrito_;
     QPushButton* botonQuitar_;
     QLabel* etiquetaTotal_;
+    // Selector 1/2/3 de la consola (Menu::preguntarMetodoPago), pero como
+    // lista desplegable en vez de pregunta por teclado.
+    QComboBox* comboMetodoPago_;
     QPushButton* botonConfirmar_;
 };
 

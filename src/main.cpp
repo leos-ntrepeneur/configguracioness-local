@@ -10,6 +10,7 @@
 #include "GestorVentas.h"
 #include "Inventario.h"
 #include "Menu.h"
+#include "RepositorioInformacionNegocioCsv.h"
 #include "RepositorioProductosCsv.h"
 #include "RepositorioVentasCsv.h"
 
@@ -29,6 +30,8 @@ int main() {
         std::make_unique<RepositorioProductosCsv>("data/productos.csv");
     std::unique_ptr<IRepositorioVentas> repositorioVentas =
         std::make_unique<RepositorioVentasCsv>("data/ventas.csv");
+    std::unique_ptr<IRepositorioInformacionNegocio> repositorioInformacionNegocio =
+        std::make_unique<RepositorioInformacionNegocioCsv>("data/negocio.csv");
 
     // Carga inicial: si es la primera vez que se ejecuta el programa y los
     // archivos todavia no existen, cargarTodos()/cargarTodas() devuelven
@@ -40,7 +43,7 @@ int main() {
     // `*repositorioProductos` desreferencia el unique_ptr para obtener una
     // IRepositorioProductos& (Menu no necesita ser dueno del repositorio,
     // solo usarlo, igual que con inventario/gestorVentas).
-    Menu menu(inventario, gestorVentas, *repositorioProductos, *repositorioVentas);
+    Menu menu(inventario, gestorVentas, *repositorioProductos, *repositorioVentas, *repositorioInformacionNegocio);
     menu.ejecutar();
     return 0;
 }

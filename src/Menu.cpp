@@ -1,5 +1,6 @@
 #include "Menu.h"
 #include "Excepciones.h"
+#include "GeneradorTicket.h"
 #include "Utilidades.h"
 
 #include <iomanip>
@@ -18,11 +19,14 @@ using utilidades::leerLinea;
 Menu::Menu(Inventario& inventario,
            GestorVentas& gestorVentas,
            IRepositorioProductos& repositorioProductos,
-           IRepositorioVentas& repositorioVentas)
+           IRepositorioVentas& repositorioVentas,
+           IRepositorioInformacionNegocio& repositorioInformacionNegocio)
     : inventario_(inventario),
       gestorVentas_(gestorVentas),
       repositorioProductos_(repositorioProductos),
-      repositorioVentas_(repositorioVentas) {}
+      repositorioVentas_(repositorioVentas),
+      repositorioInformacionNegocio_(repositorioInformacionNegocio),
+      informacionNegocio_(repositorioInformacionNegocio.cargar()) {}
 
 void Menu::ejecutar() {
     bool salir = false;
@@ -39,6 +43,9 @@ void Menu::ejecutar() {
                     break;
                 case 3:
                     alVerReporteVentasDelDia();
+                    break;
+                case 4:
+                    alConfigurarInformacionNegocio();
                     break;
                 case 0:
                     salir = true;
@@ -62,6 +69,7 @@ void Menu::mostrarMenuPrincipal() const {
     std::cout << "1. Gestion de productos\n";
     std::cout << "2. Registrar venta\n";
     std::cout << "3. Reporte de ventas del dia\n";
+    std::cout << "4. Informacion del local (para tickets)\n";
     std::cout << "0. Salir\n";
 }
 
@@ -267,6 +275,59 @@ void Menu::alVerReporteVentasDelDia() const {
                    << std::setw(14) << std::fixed << std::setprecision(2) << resumen.totalVendido
                    << "\n";
     }
+
+    mostrarHistorialTransacciones(reporte.transacciones);
+}
+
+void Menu::mostrarHistorialTransacciones(const std::vector<TransaccionDia>& transacciones) const {
+    // Esta tabla es la razon por la que se agrego el folio: la de arriba
+    // (productos mas vendidos) SUMA todas las ventas del dia; esta, en
+    // cambio, muestra cada venta por separado -- asi "vendi 5 martillos
+    // hoy" deja de ser una sola cifra ciega y se puede ver que fueron,
+    // por ejemplo, 2 ventas distintas con su propio folio, hora y forma
+    // de pago.
+    std::cout << "\nHistorial de transacciones:\n"
+              << std::left << std::setw(8) << "Folio"
+              << std::setw(22) << "Fecha y hora"
+              << std::setw(20) << "Metodo de pago"
+              << std::right << std::setw(10) << "Unidades"
+              << std::setw(12) << "Total" << "\n";
+    std::cout << std::string(72, '-') << "\n";
+
+    for (const TransaccionDia& t : transacciones) {
+        std::cout << std::left << std::setw(8) << t.numeroTransaccion
+                   << std::setw(22) << t.fechaHoraTexto
+                   << std::setw(20) << metodoPagoATexto(t.metodoPago)
+                   << std::right << std::setw(10) << t.cantidadProductos
+                   << std::setw(12) << std::fixed << std::setprecision(2) << t.total
+                   << "\n";
+    }
+}
+
+void Menu::alConfigurarInformacionNegocio() {
+    std::cout << "\n-- Informacion del local --\n";
+    std::cout << "Esto se usa para el encabezado de los tickets de venta.\n";
+    std::cout << "Datos actuales -> nombre: " << informacionNegocio_.getNombre()
+              << ", direccion: " << informacionNegocio_.getDireccion()
+              << ", telefono: " << informacionNegocio_.getTelefono()
+              << ", RFC: " << informacionNegocio_.getRfc() << "\n\n";
+
+    std::string nombre = leerLinea("Nombre del negocio (Enter para dejar igual): ");
+    std::string direccion = leerLinea("Direccion (Enter para dejar igual): ");
+    std::string telefono = leerLinea("Telefono (Enter para dejar igual): ");
+    // El RFC es SOLO texto libre para que aparezca impreso en el ticket,
+    // como en cualquier ticket de tienda -- no se valida contra el
+    // formato real del SAT ni se usa para facturar electronicamente (ver
+    // el comentario grande en InformacionNegocio.h).
+    std::string rfc = leerLinea("RFC (ejemplo/placeholder, Enter para dejar igual): ");
+
+    if (!nombre.empty()) informacionNegocio_.setNombre(nombre);
+    if (!direccion.empty()) informacionNegocio_.setDireccion(direccion);
+    if (!telefono.empty()) informacionNegocio_.setTelefono(telefono);
+    if (!rfc.empty()) informacionNegocio_.setRfc(rfc);
+
+    repositorioInformacionNegocio_.guardar(informacionNegocio_);
+    std::cout << "Informacion del local guardada.\n";
 }
 
 // --- Registro de ventas ---
@@ -408,6 +469,26 @@ void Menu::quitarDelCarrito(std::map<std::string, int>& carrito) {
     std::cout << "Producto quitado del carrito.\n";
 }
 
+MetodoPago Menu::preguntarMetodoPago() const {
+    while (true) {
+        std::cout << "\nMetodo de pago:\n";
+        std::cout << "1. Efectivo\n";
+        std::cout << "2. Tarjeta de credito\n";
+        std::cout << "3. Tarjeta de debito\n";
+        int opcion = leerEntero("Selecciona una opcion: ");
+        switch (opcion) {
+            case 1:
+                return MetodoPago::Efectivo;
+            case 2:
+                return MetodoPago::TarjetaCredito;
+            case 3:
+                return MetodoPago::TarjetaDebito;
+            default:
+                std::cout << "Opcion invalida, intenta de nuevo.\n";
+        }
+    }
+}
+
 void Menu::confirmarVenta(const std::map<std::string, int>& carrito) {
     // Construimos los DetalleVenta con el nombre/precio ACTUALES del
     // producto (snapshot en el momento de vender). GestorVentas hace su
@@ -419,16 +500,13 @@ void Menu::confirmarVenta(const std::map<std::string, int>& carrito) {
         detalles.emplace_back(codigo, producto.getNombre(), cantidad, producto.getPrecio());
     }
 
-    const Venta& venta = gestorVentas_.registrarVenta(detalles);
+    MetodoPago metodoPago = preguntarMetodoPago();
+    const Venta& venta = gestorVentas_.registrarVenta(detalles, metodoPago);
 
-    std::cout << "\n=== Venta registrada ===\n";
-    std::cout << "Fecha: " << venta.fechaComoTexto() << "\n";
-    for (const DetalleVenta& detalle : venta.getDetalles()) {
-        std::cout << "  " << detalle.getNombreProducto() << " x" << detalle.getCantidad()
-                   << " @ " << std::fixed << std::setprecision(2) << detalle.getPrecioUnitario()
-                   << " = " << detalle.getSubtotal() << "\n";
-    }
-    std::cout << "Total: " << std::fixed << std::setprecision(2) << venta.getTotal() << "\n";
+    // El ticket (mismo texto que se mostraria en la GUI, ver GeneradorTicket.h)
+    // ya trae folio, fecha, metodo de pago y el desglose completo -- no hace
+    // falta repetir un resumen aparte encima.
+    std::cout << "\n" << generarTextoTicket(venta, informacionNegocio_);
 
     // Requisito 4: avisar de inmediato si esta venta dejo algun producto
     // por debajo de su stock minimo, sin que el usuario tenga que ir a

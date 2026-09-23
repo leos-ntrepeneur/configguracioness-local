@@ -10,21 +10,29 @@
 // al otro constructor y deja que el haga todo el trabajo. En C++ anterior
 // a 2011 (o en C) esto se resolvia con un metodo privado "inicializar()"
 // llamado desde ambos constructores; delegar es mas directo.
-Venta::Venta(std::vector<DetalleVenta> detalles)
-    : Venta(std::move(detalles), std::chrono::system_clock::now()) {}
+Venta::Venta(std::vector<DetalleVenta> detalles, int numeroTransaccion, MetodoPago metodoPago)
+    : Venta(std::move(detalles), numeroTransaccion, metodoPago, std::chrono::system_clock::now()) {}
 
-Venta::Venta(std::vector<DetalleVenta> detalles, std::chrono::system_clock::time_point fecha)
-    : detalles_(std::move(detalles)),
+Venta::Venta(std::vector<DetalleVenta> detalles, int numeroTransaccion, MetodoPago metodoPago,
+             std::chrono::system_clock::time_point fecha)
+    : numeroTransaccion_(numeroTransaccion),
+      metodoPago_(metodoPago),
+      detalles_(std::move(detalles)),
       total_(0.0),
       fecha_(fecha) {
     if (detalles_.empty()) {
         throw EntradaInvalida("Una venta debe tener al menos un producto.");
+    }
+    if (numeroTransaccion_ <= 0) {
+        throw EntradaInvalida("El numero de transaccion debe ser mayor a cero.");
     }
     for (const DetalleVenta& detalle : detalles_) {
         total_ += detalle.getSubtotal();
     }
 }
 
+int Venta::getNumeroTransaccion() const { return numeroTransaccion_; }
+MetodoPago Venta::getMetodoPago() const { return metodoPago_; }
 const std::vector<DetalleVenta>& Venta::getDetalles() const { return detalles_; }
 double Venta::getTotal() const { return total_; }
 std::chrono::system_clock::time_point Venta::getFecha() const { return fecha_; }

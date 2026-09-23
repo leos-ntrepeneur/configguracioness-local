@@ -45,12 +45,18 @@ inventario-pos/
 │   ├── Inventario.h
 │   ├── DetalleVenta.h
 │   ├── Venta.h
+│   ├── MetodoPago.h                # Enum Efectivo/TarjetaCredito/TarjetaDebito
 │   ├── GestorVentas.h
+│   ├── InformacionNegocio.h        # Datos del local para el encabezado del ticket
+│   ├── GeneradorTicket.h           # Arma el texto plano del ticket (consola Y GUI)
 │   ├── IRepositorioProductos.h     # Interfaz de persistencia de productos
 │   ├── IRepositorioVentas.h        # Interfaz de persistencia de ventas
+│   ├── IRepositorioInformacionNegocio.h  # Interfaz de persistencia de InformacionNegocio
 │   ├── RepositorioProductosCsv.h   # Implementacion CSV de la interfaz
 │   ├── RepositorioVentasCsv.h      # Implementacion CSV de la interfaz
+│   ├── RepositorioInformacionNegocioCsv.h  # Implementacion CSV de la interfaz
 │   ├── CsvUtil.h                   # Parseo de lineas CSV (helper compartido)
+│   ├── ValidacionTexto.h           # Validacion de texto "seguro para CSV", compartida
 │   ├── Menu.h                      # Solo lo usa la consola
 │   ├── Utilidades.h                # Solo lo usa la consola
 │   └── Excepciones.h
@@ -59,10 +65,15 @@ inventario-pos/
 │   ├── Inventario.cpp
 │   ├── DetalleVenta.cpp
 │   ├── Venta.cpp
+│   ├── MetodoPago.cpp
 │   ├── GestorVentas.cpp
+│   ├── InformacionNegocio.cpp
+│   ├── GeneradorTicket.cpp
 │   ├── RepositorioProductosCsv.cpp
 │   ├── RepositorioVentasCsv.cpp
+│   ├── RepositorioInformacionNegocioCsv.cpp
 │   ├── CsvUtil.cpp
+│   ├── ValidacionTexto.cpp
 │   ├── Menu.cpp
 │   ├── Utilidades.cpp
 │   └── main.cpp
@@ -73,7 +84,9 @@ inventario-pos/
 │   │   ├── PestanaProductos.h      # Pestaña "Productos": tabla + alta/edicion/baja
 │   │   ├── PestanaVentas.h         # Pestaña "Vender": productos disponibles + carrito
 │   │   ├── PestanaReporte.h        # Pestaña "Reporte del dia"
+│   │   ├── PestanaInformacionNegocio.h  # Pestaña "Mi negocio": datos para el ticket
 │   │   ├── ProductoDialog.h        # Formulario emergente de alta/edicion
+│   │   ├── TicketDialog.h          # Ventana emergente que muestra el ticket de una venta
 │   │   └── TemaOscuro.h            # Aplica paleta + hoja de estilo oscura
 │   ├── src/                        # Implementaciones .cpp + main_gui.cpp
 │   └── resources/
@@ -102,38 +115,84 @@ inventario-pos/
   carga masiva desde persistencia.
 - **DetalleVenta**: una línea de venta (producto, cantidad, precio unitario
   "congelado" al momento de vender).
-- **Venta**: transacción cerrada e inmutable: fecha, lista de
-  `DetalleVenta` y total calculado.
+- **MetodoPago**: `enum class` con las 3 formas de pago que reconoce el
+  sistema (`Efectivo`, `TarjetaCredito`, `TarjetaDebito`), más las
+  funciones libres `metodoPagoATexto`/`textoAMetodoPago` para
+  convertir a/desde el texto que se guarda en CSV y se imprime en el
+  ticket.
+- **Venta**: transacción cerrada e inmutable: fecha, **número de
+  transacción (folio)**, método de pago, lista de `DetalleVenta` y total
+  calculado. El folio es lo que permite distinguir dos ventas del mismo
+  producto entre sí — antes solo existía la fecha, así que dos ventas del
+  mismo producto en la misma sesión eran indistinguibles en el reporte.
 - **GestorVentas**: valida stock suficiente para TODO el pedido antes de
-  tocar el inventario, descuenta stock a través de `Inventario`, guarda el
-  historial de ventas y genera el reporte del día (`ReporteVentasDia`).
-- **IRepositorioProductos / IRepositorioVentas**: interfaces (clases
-  abstractas con métodos virtuales puros) para guardar/cargar datos.
-  Implementadas hoy por `RepositorioProductosCsv` / `RepositorioVentasCsv`;
-  migrar a SQLite implicaría solo escribir una nueva clase que herede de
-  estas interfaces, sin tocar `Menu`, `Inventario` ni `GestorVentas`.
+  tocar el inventario, descuenta stock a través de `Inventario`, asigna el
+  folio siguiente (correlativo, solo después de que la venta pasa todas
+  las validaciones), guarda el historial de ventas y genera el reporte del
+  día (`ReporteVentasDia`, que ahora además de los totales por producto
+  incluye `transacciones`: una lista con cada venta individual del día —
+  folio, hora, método de pago y total).
+- **InformacionNegocio**: los datos del local que aparecen en el
+  encabezado del ticket (nombre, dirección, teléfono y un RFC que es
+  **solo texto de ejemplo para el ticket** — no se valida contra el
+  formato real del SAT ni habilita facturación electrónica, ver el
+  comentario grande en `InformacionNegocio.h`). Todos los campos pueden
+  quedar vacíos (un negocio recién instalado que aún no los ha
+  capturado).
+- **GeneradorTicket**: función libre `generarTextoTicket(venta, info)` que
+  arma el texto plano del ticket (encabezado del negocio, folio, fecha,
+  método de pago, detalle y total) — vive en el código de NEGOCIO
+  (`include`/`src`, no en `gui/`) precisamente para que la consola
+  (`std::cout`) y la GUI (`TicketDialog`) impriman **exactamente el mismo
+  texto** sin duplicar ni una línea de formato.
+- **IRepositorioProductos / IRepositorioVentas / IRepositorioInformacionNegocio**:
+  interfaces (clases abstractas con métodos virtuales puros) para
+  guardar/cargar datos. Implementadas hoy por `RepositorioProductosCsv` /
+  `RepositorioVentasCsv` / `RepositorioInformacionNegocioCsv`; migrar a
+  SQLite implicaría solo escribir una nueva clase que herede de estas
+  interfaces, sin tocar `Menu`, `Inventario` ni `GestorVentas`.
 - **Menu**: capa de presentación (menús de consola, incluido el flujo de
-  carrito para registrar una venta). No contiene lógica de negocio ni de
+  carrito para registrar una venta, la pregunta de método de pago y la
+  edición de `InformacionNegocio`). No contiene lógica de negocio ni de
   persistencia, solo las invoca y maneja errores con `try/catch`.
 - **Excepciones**: `ProductoNoEncontrado`, `CodigoDuplicado`,
   `StockInsuficiente`, `EntradaInvalida`, `FinDeEntrada` — errores de
   negocio como excepciones en vez de códigos de retorno.
-- **Utilidades / CsvUtil**: lectura segura de consola y parseo de líneas
-  CSV, respectivamente.
+- **Utilidades / CsvUtil / ValidacionTexto**: lectura segura de consola,
+  parseo de líneas CSV, y validación de texto "seguro para CSV" (sin
+  comas ni caracteres de control, dentro de una longitud máxima) —
+  compartida entre `Producto` e `InformacionNegocio` para no duplicar la
+  misma regla dos veces.
 
 ### Clases de la interfaz gráfica (`gui/`)
 
 - **MainWindow**: cumple el mismo papel que `main.cpp` + `Menu` en la
-  consola — es dueña de `Inventario`, `GestorVentas` y los repositorios,
-  arma las 3 pestañas y conecta sus señales (`datosModificados()`) para
-  guardar en disco y refrescar automáticamente.
+  consola — es dueña de `Inventario`, `GestorVentas`, `InformacionNegocio`
+  y los repositorios, arma las 4 pestañas y conecta sus señales
+  (`datosModificados()`) para guardar en disco y refrescar
+  automáticamente.
 - **PestanaProductos**: tabla de productos + búsqueda + botones
   Nuevo/Editar/Eliminar, con las filas de stock bajo resaltadas.
 - **PestanaVentas**: productos disponibles a la izquierda, carrito a la
-  derecha (mismo diseño que el flujo de consola, pero con clics).
-- **PestanaReporte**: totales y ranking de productos más vendidos del día.
+  derecha (mismo diseño que el flujo de consola, pero con clics), con un
+  selector de método de pago antes de confirmar. Al confirmar, registra la
+  venta (con su folio y método de pago) y muestra el ticket en un
+  `TicketDialog`.
+- **PestanaReporte**: totales y ranking de productos más vendidos del día,
+  más una tabla de "Historial de transacciones" (folio, hora, método de
+  pago y total de cada venta individual) para poder distinguir dos ventas
+  del mismo producto entre sí.
+- **PestanaInformacionNegocio** ("Mi negocio"): formulario para capturar
+  los datos del local que aparecen en el ticket. Recibe la
+  `InformacionNegocio` de `MainWindow` **por referencia** (no una copia):
+  al guardar, `PestanaVentas` ve los datos nuevos de inmediato en el
+  siguiente ticket, sin necesidad de reiniciar la aplicación.
 - **ProductoDialog**: formulario emergente reutilizado tanto para alta
   como para edición.
+- **TicketDialog**: ventana emergente de solo lectura que muestra el texto
+  del ticket (generado por `GeneradorTicket`, el mismo que usa la
+  consola) en una fuente monoespaciada, dimensionada con `QFontMetrics`
+  para que las 40 columnas del ticket siempre quepan sin recortarse.
 - **TemaOscuro**: aplica el tema oscuro completo en un solo lugar —
   combina una `QPalette` oscura (para lo que Qt dibuja "a mano", como las
   flechitas de un spinbox o el atenuado de campos deshabilitados) con la
@@ -156,10 +215,13 @@ con la consola es cómo se piden/muestran los datos.
   instalada) para títulos y encabezados de pestaña; el texto de datos
   (tablas, formularios) usa la fuente del sistema, más legible a tamaños
   chicos.
-- **Color**: acento azul-violeta en degradado para botones de acción
-  primaria (`qlineargradient` en `style.qss`), y un teal (`#14b8a6`)
-  deliberadamente distinto para filas seleccionadas en tablas, para que
-  "botón de acción" y "fila seleccionada" no se confundan visualmente.
+- **Color**: un solo acento (teal, `#14b8a6`–`#2dd4bf`) para *todo* lo que
+  antes usaba azul — botones de acción primaria (en degradado
+  `qlineargradient`, ver `style.qss`), foco de campos, pestaña activa y
+  selección de filas en tablas. Antes se usaba un azul para botones y un
+  teal distinto para la selección; se unificó a un solo color porque tener
+  dos acentos distintos no aportaba nada y el teal es el que mejor contraste
+  da sobre el fondo oscuro.
 
 ### Ajuste manual de stock
 
@@ -184,6 +246,32 @@ editar.
   manejo de archivos, el siguiente paso natural es migrar a SQLite
   implementando `RepositorioProductosSqlite` / `RepositorioVentasSqlite`
   sobre las mismas interfaces.
+- `data/negocio.csv` guarda `InformacionNegocio` en un archivo aparte, de
+  una sola fila de datos (más su encabezado) — no tiene sentido un archivo
+  con múltiples filas cuando solo existe un registro a la vez.
+
+### Tickets de venta
+
+- Cada venta queda identificada por un **folio** (número de transacción)
+  correlativo, asignado por `GestorVentas` solo después de que la venta
+  pasa todas las validaciones de stock — así no se "queman" números en
+  ventas que fallan. El folio, junto con la fecha/hora exacta y el método
+  de pago, es lo que permite separar dos ventas del mismo producto entre
+  sí; antes de esto, dos compras seguidas del mismo producto se veían
+  mezcladas en el reporte del día.
+- Al confirmar una venta (consola o GUI) se pide el **método de pago**
+  (Efectivo / Tarjeta de crédito / Tarjeta de débito) y se genera un
+  **ticket** con `GeneradorTicket::generarTextoTicket`: encabezado con los
+  datos del local (tomados de `InformacionNegocio`, capturados en el menú
+  "Información del local" de la consola o la pestaña "Mi negocio" de la
+  GUI), folio, fecha, método de pago, el detalle de la compra y el total.
+  La consola lo imprime con `std::cout`; la GUI lo muestra en un
+  `TicketDialog` con fuente monoespaciada.
+- El RFC de `InformacionNegocio` es **solo un texto de ejemplo** que se
+  imprime en el ticket, igual que en cualquier ticket de tienda física —
+  deliberadamente NO se valida contra el formato real del SAT ni habilita
+  facturación electrónica (CFDI). Es un campo para que el ticket se vea
+  completo, no el punto de partida de un módulo de facturación.
 
 ## Cómo compilar y ejecutar (Windows)
 
@@ -286,9 +374,10 @@ de CMake de Visual Studio.
    **`inventario_pos_gui`** (no `inventario_pos`, ese es la consola).
 2. Presiona el botón verde ▷ (o `Ctrl+R`).
 
-Se abre la ventana con las 3 pestañas (Productos / Vender / Reporte del
-día). Los datos se guardan igual que en consola, en `data/productos.csv`
-y `data/ventas.csv` junto al ejecutable.
+Se abre la ventana con las 4 pestañas (Productos / Vender / Reporte del
+día / Mi negocio). Los datos se guardan igual que en consola, en
+`data/productos.csv`, `data/ventas.csv` y `data/negocio.csv` junto al
+ejecutable.
 
 ### Alternativa: Visual Studio
 
@@ -359,3 +448,16 @@ naturales para seguir mostrando profundidad técnica:
   `Producto`, `Inventario` y `GestorVentas`, que ya están diseñados sin
   dependencias de consola y por lo tanto son fáciles de probar de forma
   aislada.
+- **Costo del producto y margen de utilidad real.** Ahora mismo `Producto`
+  solo guarda el precio de VENTA, así que el "Total vendido" del reporte es
+  ingreso bruto, no ganancia — no hay forma de saber si el negocio está
+  ganando dinero o vendiendo por debajo del costo. Es el hueco más
+  importante que le falta a este tipo de software para una PyME real:
+  agregar un campo `costo` a `Producto` (con la misma validación que
+  `precio`), guardarlo también como snapshot en `DetalleVenta` al momento
+  de vender (igual que ya se hace con el precio, para que un cambio de
+  costo futuro no reescriba el margen de ventas pasadas), y sumar
+  "Utilidad del día" (`total vendido - total costo`) al reporte y al
+  ticket interno. Es relativamente chico de implementar con la
+  arquitectura actual y es, con diferencia, el dato que más le importa a
+  un dueño de negocio día a día.

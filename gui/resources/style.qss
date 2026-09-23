@@ -16,10 +16,14 @@
  *   Borde               #3f4147
  *   Texto principal     #e3e5e8
  *   Texto secundario    #949ba4
- *   Acento / botones    degradado #6b76f5 -> #4338ca (hover/pressed mas oscuros)
- *   Seleccion en tablas  #14b8a6 (teal) -- DELIBERADAMENTE distinto del azul
- *                        de los botones, para que "boton de accion" y "fila
- *                        seleccionada" no se confundan al ser el mismo color.
+ *   Acento (UN SOLO color, teal, para todo -- botones, foco, pestaña
+ *   activa, seleccion en tablas):
+ *     teal-300 (claro)   #5eead4
+ *     teal-400           #2dd4bf
+ *     teal-500 (base)    #14b8a6
+ *     teal-600           #0d9488
+ *     teal-700           #0f766e
+ *     teal-800 (oscuro)  #115e59
  *   Peligro             #ed4245 / hover #c62a2d
  *
  * Fuentes: "Manrope" (incrustada, ver TemaOscuro.cpp) solo para titulos y
@@ -86,7 +90,7 @@ QTabBar::tab:hover {
 
 QTabBar::tab:selected {
     color: #e3e5e8;
-    border-bottom: 2px solid #5865f2;
+    border-bottom: 2px solid #14b8a6;
 }
 
 /* ---------- Botones ---------- */
@@ -117,26 +121,28 @@ QPushButton:disabled {
 /* Botones de accion principal (marcados desde C++ con setProperty("clase",
  * "primario"), o el boton "por defecto" de un QDialogButtonBox -- el que
  * dispara Enter, normalmente "Aceptar"). qlineargradient pinta un degradado
- * diagonal en vez de un azul plano: dos tonos de la MISMA familia de color
- * (no un arcoiris), lo suficientemente sutil para no estorbar la lectura
- * del texto del boton encima. */
+ * diagonal en teal (el mismo color de la seleccion en tablas -- un solo
+ * acento consistente en toda la app) en vez de un color plano: dos tonos
+ * de la MISMA familia (no un arcoiris), lo suficientemente sutil para no
+ * estorbar la lectura del texto del boton encima. */
 QPushButton:default,
 QPushButton[clase="primario"] {
     background-color: qlineargradient(
         x1: 0, y1: 0, x2: 0, y2: 1,
-        stop: 0 #6b76f5,
-        stop: 1 #4338ca
+        stop: 0 #2dd4bf,
+        stop: 1 #0d9488
     );
-    border-color: #4338ca;
-    color: #ffffff;
+    border-color: #0d9488;
+    color: #052e2b;
+    font-weight: 700;
 }
 
 QPushButton:default:hover,
 QPushButton[clase="primario"]:hover {
     background-color: qlineargradient(
         x1: 0, y1: 0, x2: 0, y2: 1,
-        stop: 0 #7981f6,
-        stop: 1 #4c42d6
+        stop: 0 #5eead4,
+        stop: 1 #0f9488
     );
 }
 
@@ -144,8 +150,8 @@ QPushButton:default:pressed,
 QPushButton[clase="primario"]:pressed {
     background-color: qlineargradient(
         x1: 0, y1: 0, x2: 0, y2: 1,
-        stop: 0 #4c42d6,
-        stop: 1 #362da3
+        stop: 0 #0f9488,
+        stop: 1 #115e59
     );
 }
 
@@ -172,11 +178,12 @@ QLineEdit, QSpinBox, QDoubleSpinBox {
     border: 1px solid #3f4147;
     border-radius: 6px;
     padding: 8px 10px;
-    selection-background-color: #5865f2;
+    selection-background-color: #14b8a6;
+    selection-color: #052e2b;
 }
 
 QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
-    border: 1px solid #5865f2;
+    border: 1px solid #14b8a6;
 }
 
 /* Campo deshabilitado (ej. "Codigo" al editar un producto): mas oscuro y

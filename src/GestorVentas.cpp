@@ -6,7 +6,7 @@
 
 GestorVentas::GestorVentas(Inventario& inventario) : inventario_(inventario) {}
 
-const Venta& GestorVentas::registrarVenta(const std::vector<DetalleVenta>& detalles) {
+const Venta& GestorVentas::registrarVenta(const std::vector<DetalleVenta>& detalles, MetodoPago metodoPago) {
     if (detalles.empty()) {
         throw EntradaInvalida("La venta no tiene productos.");
     }
@@ -53,8 +53,13 @@ const Venta& GestorVentas::registrarVenta(const std::vector<DetalleVenta>& detal
 
     // emplace_back construye la Venta directamente dentro del vector (con
     // los argumentos dados), en vez de crearla aparte y copiarla/moverla
-    // adentro como haria push_back. Es una optimizacion tipica de C++.
-    ventas_.emplace_back(detalles);
+    // adentro como haria push_back. Es una optimizacion tipica de C++. El
+    // folio se toma y se avanza SOLO aqui, una vez que ya sabemos que la
+    // venta va a completarse (todas las validaciones de arriba pasaron) --
+    // asi un intento fallido (ej. StockInsuficiente) no "quema" un numero
+    // de folio que nunca llego a usarse.
+    int folio = siguienteNumeroTransaccion_++;
+    ventas_.emplace_back(detalles, folio, metodoPago);
     return ventas_.back();
 }
 
@@ -64,6 +69,15 @@ const std::vector<Venta>& GestorVentas::listarVentas() const {
 
 std::size_t GestorVentas::cantidadVentas() const {
     return ventas_.size();
+}
+
+const Venta* GestorVentas::buscarPorNumeroTransaccion(int numeroTransaccion) const {
+    for (const Venta& venta : ventas_) {
+        if (venta.getNumeroTransaccion() == numeroTransaccion) {
+            return &venta;
+        }
+    }
+    return nullptr;
 }
 
 ReporteVentasDia GestorVentas::generarReporteDelDia() const {
@@ -80,6 +94,19 @@ ReporteVentasDia GestorVentas::generarReporteDelDia() const {
         }
         reporte.numeroTransacciones++;
         reporte.totalVendido += venta.getTotal();
+
+        // Fila del historial: ESTA venta, sola, sin mezclarse con las
+        // demas -- es la parte que antes faltaba (el reporte solo sumaba
+        // por producto, nunca mostraba las transacciones por separado).
+        TransaccionDia fila;
+        fila.numeroTransaccion = venta.getNumeroTransaccion();
+        fila.fechaHoraTexto = venta.fechaComoTexto();
+        fila.metodoPago = venta.getMetodoPago();
+        fila.total = venta.getTotal();
+        for (const DetalleVenta& detalle : venta.getDetalles()) {
+            fila.cantidadProductos += detalle.getCantidad();
+        }
+        reporte.transacciones.push_back(fila);
 
         for (const DetalleVenta& detalle : venta.getDetalles()) {
             // operator[] crea la entrada con el ResumenProducto por
@@ -112,4 +139,14 @@ ReporteVentasDia GestorVentas::generarReporteDelDia() const {
 
 void GestorVentas::cargarVentas(std::vector<Venta> ventas) {
     ventas_ = std::move(ventas);
+
+    // El siguiente folio debe quedar por encima de CUALQUIER folio ya
+    // usado en el historial cargado -- si no, la primera venta nueva del
+    // dia reutilizaria un numero de una venta de ayer.
+    siguienteNumeroTransaccion_ = 1;
+    for (const Venta& venta : ventas_) {
+        if (venta.getNumeroTransaccion() >= siguienteNumeroTransaccion_) {
+            siguienteNumeroTransaccion_ = venta.getNumeroTransaccion() + 1;
+        }
+    }
 }

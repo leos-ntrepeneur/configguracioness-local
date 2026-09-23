@@ -13,9 +13,12 @@
 #include <vector>
 
 #include "GestorVentas.h"
+#include "IRepositorioInformacionNegocio.h"
 #include "IRepositorioProductos.h"
 #include "IRepositorioVentas.h"
+#include "InformacionNegocio.h"
 #include "Inventario.h"
+#include "MetodoPago.h"
 
 class Menu {
 public:
@@ -33,7 +36,8 @@ public:
     Menu(Inventario& inventario,
          GestorVentas& gestorVentas,
          IRepositorioProductos& repositorioProductos,
-         IRepositorioVentas& repositorioVentas);
+         IRepositorioVentas& repositorioVentas,
+         IRepositorioInformacionNegocio& repositorioInformacionNegocio);
 
     // Punto de entrada: corre el bucle principal hasta que el usuario
     // elige salir.
@@ -51,6 +55,13 @@ private:
     void alVerAlertasStockBajo() const;
 
     void alVerReporteVentasDelDia() const;
+    // Imprime el historial de transacciones del dia (folio, hora, metodo
+    // de pago, total), como parte del reporte -- es lo que antes faltaba
+    // para poder distinguir una venta de otra en vez de solo ver el total
+    // sumado por producto.
+    void mostrarHistorialTransacciones(const std::vector<TransaccionDia>& transacciones) const;
+
+    void alConfigurarInformacionNegocio();
 
     // Compartida por alListarProductos() y alBuscarProducto() para no
     // duplicar el formato de tabla en dos lugares.
@@ -65,6 +76,11 @@ private:
     void agregarAlCarrito(std::map<std::string, int>& carrito);
     void quitarDelCarrito(std::map<std::string, int>& carrito);
     void confirmarVenta(const std::map<std::string, int>& carrito);
+    // Pide el metodo de pago por teclado (1/2/3); reintenta hasta que la
+    // opcion sea valida en vez de lanzar EntradaInvalida por una eleccion
+    // de menu -- no es un dato de negocio invalido, solo hay que repetir
+    // la pregunta.
+    MetodoPago preguntarMetodoPago() const;
 
     // --- Persistencia (Requisito 6) ---
     // Se llama despues de cada alta/edicion/baja/venta exitosa, para que
@@ -76,6 +92,12 @@ private:
     GestorVentas& gestorVentas_;
     IRepositorioProductos& repositorioProductos_;
     IRepositorioVentas& repositorioVentas_;
+    IRepositorioInformacionNegocio& repositorioInformacionNegocio_;
+    // A diferencia de Inventario/GestorVentas (colecciones grandes que
+    // viven fuera de Menu), la InformacionNegocio es un solo registro
+    // chico: Menu la mantiene en memoria directamente y la guarda a
+    // traves del repositorio cuando el usuario la edita.
+    InformacionNegocio informacionNegocio_;
 };
 
 #endif // MENU_H
