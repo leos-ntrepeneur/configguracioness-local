@@ -171,6 +171,43 @@ QPushButton[clase="peligro"]:pressed {
     border-color: #c62a2d;
 }
 
+/* Botones tipo "interruptor" en un grupo exclusivo (ej. el selector de
+ * metodo de pago en la pestaña Vender: setCheckable(true) + QButtonGroup
+ * exclusivo, marcados desde C++ con setProperty("clase", "seleccionable")).
+ * Sin seleccionar se ven neutros; el que queda :checked se pinta con el
+ * mismo degradado teal que un boton "primario", para que sea obvio de un
+ * vistazo cual esta activo sin tener que leer una casilla o un combo. */
+QPushButton[clase="seleccionable"] {
+    background-color: #313338;
+    border: 1px solid #3f4147;
+    color: #949ba4;
+}
+
+QPushButton[clase="seleccionable"]:hover {
+    background-color: #3a3c42;
+    border-color: #4a4d54;
+    color: #e3e5e8;
+}
+
+QPushButton[clase="seleccionable"]:checked {
+    background-color: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #2dd4bf,
+        stop: 1 #0d9488
+    );
+    border-color: #0d9488;
+    color: #052e2b;
+    font-weight: 700;
+}
+
+QPushButton[clase="seleccionable"]:checked:hover {
+    background-color: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #5eead4,
+        stop: 1 #0f9488
+    );
+}
+
 /* ---------- Campos de entrada ---------- */
 QLineEdit, QSpinBox, QDoubleSpinBox {
     background-color: #313338;

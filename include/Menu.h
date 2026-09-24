@@ -13,8 +13,12 @@
 #include <vector>
 
 #include "CorteCaja.h"
+#include "GestorClientes.h"
 #include "GestorCortes.h"
+#include "GestorCreditos.h"
 #include "GestorVentas.h"
+#include "IRepositorioAbonos.h"
+#include "IRepositorioClientes.h"
 #include "IRepositorioCortes.h"
 #include "IRepositorioInformacionNegocio.h"
 #include "IRepositorioProductos.h"
@@ -39,10 +43,14 @@ public:
     Menu(Inventario& inventario,
          GestorVentas& gestorVentas,
          GestorCortes& gestorCortes,
+         GestorClientes& gestorClientes,
+         GestorCreditos& gestorCreditos,
          IRepositorioProductos& repositorioProductos,
          IRepositorioVentas& repositorioVentas,
          IRepositorioInformacionNegocio& repositorioInformacionNegocio,
-         IRepositorioCortes& repositorioCortes);
+         IRepositorioCortes& repositorioCortes,
+         IRepositorioClientes& repositorioClientes,
+         IRepositorioAbonos& repositorioAbonos);
 
     // Punto de entrada: corre el bucle principal hasta que el usuario
     // elige salir.
@@ -84,6 +92,31 @@ private:
     void alVerCortesAnteriores() const;
     void mostrarTablaCortes(const std::vector<CorteCaja>& cortes) const;
 
+    // --- Archivo de ventas (historial completo, todos los dias) ---
+    // A diferencia de alVerReporteVentasDelDia() (SOLO hoy), esto lista
+    // TODAS las ventas registradas desde siempre -- ya se guardan
+    // completas en ventas.csv, esto es solo la vista para revisarlas.
+    void alVerArchivoVentas() const;
+    void mostrarTablaVentas(const std::vector<Venta>& ventas) const;
+
+    // --- Clientes y ventas al fiado ---
+    // Idea de negocio pensada para abarrotes/ferreterias mexicanas: vender
+    // "al fiado" a clientes de confianza, cobrando despues. El saldo que
+    // debe cada cliente NUNCA se guarda como numero aparte -- se calcula
+    // en vivo (ver GestorCreditos) sumando sus ventas al fiado y
+    // restandole sus abonos.
+    void alGestionarClientes();
+    void alDarAltaCliente();
+    void alListarClientes() const;
+    void mostrarTablaClientes(const std::vector<Cliente>& clientes) const;
+    void alRegistrarAbono();
+    // Usado por confirmarVenta() cuando el metodo de pago elegido es
+    // Fiado: pide un id de cliente existente o da de alta uno nuevo en el
+    // momento. Reintenta hasta obtener un cliente valido (igual criterio
+    // que preguntarMetodoPago(): una eleccion de menu invalida no es un
+    // error de negocio, solo hay que repetir la pregunta).
+    const Cliente& elegirOCrearCliente();
+
     // Compartida por alListarProductos() y alBuscarProducto() para no
     // duplicar el formato de tabla en dos lugares.
     void mostrarTablaProductos(const std::vector<Producto>& productos) const;
@@ -112,10 +145,14 @@ private:
     Inventario& inventario_;
     GestorVentas& gestorVentas_;
     GestorCortes& gestorCortes_;
+    GestorClientes& gestorClientes_;
+    GestorCreditos& gestorCreditos_;
     IRepositorioProductos& repositorioProductos_;
     IRepositorioVentas& repositorioVentas_;
     IRepositorioInformacionNegocio& repositorioInformacionNegocio_;
     IRepositorioCortes& repositorioCortes_;
+    IRepositorioClientes& repositorioClientes_;
+    IRepositorioAbonos& repositorioAbonos_;
     // A diferencia de Inventario/GestorVentas (colecciones grandes que
     // viven fuera de Menu), la InformacionNegocio es un solo registro
     // chico: Menu la mantiene en memoria directamente y la guarda a

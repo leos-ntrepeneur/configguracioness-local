@@ -32,6 +32,13 @@ set(CORE_SOURCES
     src/GestorCortes.cpp
     src/RepositorioCortesCsv.cpp
     src/GeneradorCorte.cpp
+    src/Iva.cpp
+    src/Cliente.cpp
+    src/GestorClientes.cpp
+    src/RepositorioClientesCsv.cpp
+    src/Abono.cpp
+    src/GestorCreditos.cpp
+    src/RepositorioAbonosCsv.cpp
 )
 
 set(CONSOLE_SOURCES

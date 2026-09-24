@@ -38,7 +38,7 @@ public:
     // genero.
     CorteCaja(int numeroCorte, std::chrono::system_clock::time_point fechaHoraCierre, int folioInicial,
               int folioFinal, int numeroTransacciones, double totalVendido, double totalEfectivo,
-              double totalTarjetaCredito, double totalTarjetaDebito);
+              double totalTarjetaCredito, double totalTarjetaDebito, double totalFiado);
 
     int getNumeroCorte() const;
     std::chrono::system_clock::time_point getFechaHoraCierre() const;
@@ -57,6 +57,12 @@ public:
     double getTotalEfectivo() const;
     double getTotalTarjetaCredito() const;
     double getTotalTarjetaDebito() const;
+    // Parte de totalVendido que se vendio AL FIADO -- dinero que todavia
+    // NO ha entrado a la caja, a diferencia de los otros tres totales.
+    // Separarlo es lo que evita que un corte de caja diga "entraron
+    // $5,000" cuando en realidad una parte todavia esta pendiente de
+    // cobro.
+    double getTotalFiado() const;
 
 private:
     int numeroCorte_;
@@ -68,6 +74,7 @@ private:
     double totalEfectivo_;
     double totalTarjetaCredito_;
     double totalTarjetaDebito_;
+    double totalFiado_;
 };
 
 #endif // CORTE_CAJA_H

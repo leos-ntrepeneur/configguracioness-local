@@ -45,7 +45,8 @@ void RepositorioVentasCsv::guardarTodas(const std::vector<Venta>& ventas) {
         throw std::runtime_error("No se pudo abrir '" + rutaArchivo_ + "' para guardar ventas.");
     }
 
-    archivo << "ventaId,fecha,metodoPago,codigoProducto,nombreProducto,cantidad,precioUnitario\n";
+    archivo << "ventaId,fecha,metodoPago,clienteId,nombreCliente,codigoProducto,nombreProducto,cantidad,"
+               "precioUnitario\n";
     for (const Venta& venta : ventas) {
         // El folio YA es parte de la propia Venta (venta.getNumeroTransaccion(),
         // asignado por GestorVentas al registrarla) -- a diferencia de la
@@ -54,9 +55,10 @@ void RepositorioVentasCsv::guardarTodas(const std::vector<Venta>& ventas) {
         // coincidiendo con lo que hay en el archivo despues.
         for (const DetalleVenta& detalle : venta.getDetalles()) {
             archivo << venta.getNumeroTransaccion() << ',' << venta.fechaComoTexto() << ','
-                    << metodoPagoATexto(venta.getMetodoPago()) << ','
-                    << detalle.getCodigoProducto() << ',' << detalle.getNombreProducto() << ','
-                    << detalle.getCantidad() << ',' << detalle.getPrecioUnitario() << '\n';
+                    << metodoPagoATexto(venta.getMetodoPago()) << ',' << venta.getClienteId() << ','
+                    << venta.getNombreCliente() << ',' << detalle.getCodigoProducto() << ','
+                    << detalle.getNombreProducto() << ',' << detalle.getCantidad() << ','
+                    << detalle.getPrecioUnitario() << '\n';
         }
     }
 }
@@ -72,6 +74,8 @@ std::vector<Venta> RepositorioVentasCsv::cargarTodas() {
     std::string idActual;
     std::string fechaActual;
     std::string metodoPagoActual;
+    std::string clienteIdActual;
+    std::string nombreClienteActual;
     std::vector<DetalleVenta> detallesActuales;
 
     // Lambda que "cierra" el grupo de filas acumulado hasta ahora y lo
@@ -85,12 +89,13 @@ std::vector<Venta> RepositorioVentasCsv::cargarTodas() {
         try {
             int numeroTransaccion = std::stoi(idActual);
             MetodoPago metodoPago = textoAMetodoPago(metodoPagoActual);
-            resultado.emplace_back(std::move(detallesActuales), numeroTransaccion, metodoPago,
-                                    parsearFecha(fechaActual));
+            int clienteId = std::stoi(clienteIdActual);
+            resultado.emplace_back(std::move(detallesActuales), numeroTransaccion, metodoPago, clienteId,
+                                    nombreClienteActual, parsearFecha(fechaActual));
         } catch (const std::exception&) {
-            // Fecha/folio/metodo de pago corrupto o detalles invalidos: se
-            // descarta esa venta completa en vez de tronar la carga de
-            // todo el historial.
+            // Fecha/folio/metodo de pago/cliente corrupto o detalles
+            // invalidos: se descarta esa venta completa en vez de tronar
+            // la carga de todo el historial.
         }
         detallesActuales.clear();
     };
@@ -107,7 +112,7 @@ std::vector<Venta> RepositorioVentasCsv::cargarTodas() {
         }
 
         std::vector<std::string> campos = csv::dividirLinea(linea);
-        if (campos.size() != 7) {
+        if (campos.size() != 9) {
             continue;
         }
         const std::string& ventaId = campos[0];
@@ -117,10 +122,12 @@ std::vector<Venta> RepositorioVentasCsv::cargarTodas() {
             idActual = ventaId;
             fechaActual = campos[1];
             metodoPagoActual = campos[2];
+            clienteIdActual = campos[3];
+            nombreClienteActual = campos[4];
         }
 
         try {
-            detallesActuales.emplace_back(campos[3], campos[4], std::stoi(campos[5]), std::stod(campos[6]));
+            detallesActuales.emplace_back(campos[5], campos[6], std::stoi(campos[7]), std::stod(campos[8]));
         } catch (const std::exception&) {
             continue; // fila con numero invalido: se ignora esa linea.
         }

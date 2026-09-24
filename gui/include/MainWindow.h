@@ -11,8 +11,12 @@
 #include <QMainWindow>
 #include <memory>
 
+#include "GestorClientes.h"
 #include "GestorCortes.h"
+#include "GestorCreditos.h"
 #include "GestorVentas.h"
+#include "IRepositorioAbonos.h"
+#include "IRepositorioClientes.h"
 #include "IRepositorioCortes.h"
 #include "IRepositorioInformacionNegocio.h"
 #include "IRepositorioProductos.h"
@@ -26,6 +30,8 @@ class PestanaVentas;
 class PestanaReporte;
 class PestanaInformacionNegocio;
 class PestanaCortes;
+class PestanaArchivoVentas;
+class PestanaClientes;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -58,6 +64,13 @@ private:
     // separarlos evita que GestorVentas crezca con responsabilidades que
     // no le tocan.
     GestorCortes gestorCortes_;
+    // Idea de negocio: ventas al fiado (a credito) para abarrotes/
+    // ferreterias mexicanas -- ver el comentario grande en GestorCreditos.h.
+    // GestorClientes es independiente de todo lo demas (ni GestorVentas ni
+    // GestorCortes lo necesitan); GestorCreditos si depende de
+    // GestorVentas (para sumar lo fiado de cada cliente).
+    GestorClientes gestorClientes_;
+    GestorCreditos gestorCreditos_;
     // Igual que InformacionNegocio en Menu (consola): un solo registro
     // chico, se mantiene en memoria y se guarda por su repositorio cuando
     // el usuario la edita en PestanaInformacionNegocio.
@@ -67,6 +80,8 @@ private:
     std::unique_ptr<IRepositorioVentas> repositorioVentas_;
     std::unique_ptr<IRepositorioInformacionNegocio> repositorioInformacionNegocio_;
     std::unique_ptr<IRepositorioCortes> repositorioCortes_;
+    std::unique_ptr<IRepositorioClientes> repositorioClientes_;
+    std::unique_ptr<IRepositorioAbonos> repositorioAbonos_;
 
     QTabWidget* tabs_;
     PestanaProductos* pestanaProductos_;
@@ -74,6 +89,8 @@ private:
     PestanaReporte* pestanaReporte_;
     PestanaInformacionNegocio* pestanaInformacionNegocio_;
     PestanaCortes* pestanaCortes_;
+    PestanaArchivoVentas* pestanaArchivoVentas_;
+    PestanaClientes* pestanaClientes_;
 };
 
 #endif // MAIN_WINDOW_H

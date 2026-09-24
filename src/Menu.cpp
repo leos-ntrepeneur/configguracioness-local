@@ -2,6 +2,7 @@
 #include "Excepciones.h"
 #include "GeneradorCorte.h"
 #include "GeneradorTicket.h"
+#include "Iva.h"
 #include "Utilidades.h"
 
 #include <algorithm>
@@ -21,17 +22,25 @@ using utilidades::leerLinea;
 Menu::Menu(Inventario& inventario,
            GestorVentas& gestorVentas,
            GestorCortes& gestorCortes,
+           GestorClientes& gestorClientes,
+           GestorCreditos& gestorCreditos,
            IRepositorioProductos& repositorioProductos,
            IRepositorioVentas& repositorioVentas,
            IRepositorioInformacionNegocio& repositorioInformacionNegocio,
-           IRepositorioCortes& repositorioCortes)
+           IRepositorioCortes& repositorioCortes,
+           IRepositorioClientes& repositorioClientes,
+           IRepositorioAbonos& repositorioAbonos)
     : inventario_(inventario),
       gestorVentas_(gestorVentas),
       gestorCortes_(gestorCortes),
+      gestorClientes_(gestorClientes),
+      gestorCreditos_(gestorCreditos),
       repositorioProductos_(repositorioProductos),
       repositorioVentas_(repositorioVentas),
       repositorioInformacionNegocio_(repositorioInformacionNegocio),
       repositorioCortes_(repositorioCortes),
+      repositorioClientes_(repositorioClientes),
+      repositorioAbonos_(repositorioAbonos),
       informacionNegocio_(repositorioInformacionNegocio.cargar()) {}
 
 void Menu::ejecutar() {
@@ -59,6 +68,12 @@ void Menu::ejecutar() {
                 case 6:
                     alVerCortesAnteriores();
                     break;
+                case 7:
+                    alVerArchivoVentas();
+                    break;
+                case 8:
+                    alGestionarClientes();
+                    break;
                 case 0:
                     salir = true;
                     std::cout << "Hasta luego.\n";
@@ -84,6 +99,8 @@ void Menu::mostrarMenuPrincipal() const {
     std::cout << "4. Informacion del local (para tickets)\n";
     std::cout << "5. Cerrar el dia (corte de caja)\n";
     std::cout << "6. Ver cortes anteriores\n";
+    std::cout << "7. Ver archivo completo de ventas\n";
+    std::cout << "8. Clientes y ventas al fiado\n";
     std::cout << "0. Salir\n";
 }
 
@@ -132,7 +149,9 @@ void Menu::alDarAltaProducto() {
     std::cout << "\n-- Alta de producto --\n";
     std::string codigo = leerLinea("Codigo (unico): ");
     std::string nombre = leerLinea("Nombre: ");
-    double precio = leerDouble("Precio: ");
+    double precio = leerDouble("Precio (IVA incluido): ");
+    std::cout << "  (IVA incluido en ese precio: $" << std::fixed << std::setprecision(2)
+              << iva::calcularMontoIva(precio) << ")\n";
     int stock = leerEntero("Stock inicial: ");
     std::string categoria = leerLinea("Categoria (opcional, Enter para omitir): ");
     int stockMinimo = leerEntero("Alertar cuando el stock baje de (0 si no aplica): ");
@@ -158,7 +177,9 @@ void Menu::alEditarProducto() {
               << ", alerta si baja de: " << actual.getStockMinimo() << "\n";
 
     std::string nombre = leerLinea("Nuevo nombre: ");
-    double precio = leerDouble("Nuevo precio: ");
+    double precio = leerDouble("Nuevo precio (IVA incluido): ");
+    std::cout << "  (IVA incluido en ese precio: $" << std::fixed << std::setprecision(2)
+              << iva::calcularMontoIva(precio) << ")\n";
     std::string categoria = leerLinea("Nueva categoria (Enter para dejar vacia): ");
     // El stock SI se puede corregir aqui a mano (ej. conteo fisico, mercancia
     // dañada) -- es un ajuste directo, distinto de que baje solo al vender.
@@ -292,6 +313,17 @@ void Menu::alVerReporteVentasDelDia() const {
 
     mostrarHistorialTransacciones(reporte.transacciones);
     mostrarGraficaVentasPorCategoria(reporte.ventasPorCategoria);
+
+    int numeroTransaccion = leerEntero("\nVer ticket de una venta (folio, 0 para omitir): ");
+    if (numeroTransaccion == 0) {
+        return;
+    }
+    const Venta* venta = gestorVentas_.buscarPorNumeroTransaccion(numeroTransaccion);
+    if (venta == nullptr) {
+        std::cout << "No existe una venta con ese folio.\n";
+        return;
+    }
+    std::cout << "\n" << generarTextoTicket(*venta, informacionNegocio_);
 }
 
 void Menu::mostrarHistorialTransacciones(const std::vector<TransaccionDia>& transacciones) const {
@@ -452,6 +484,217 @@ void Menu::mostrarTablaCortes(const std::vector<CorteCaja>& cortes) const {
     }
 }
 
+void Menu::alVerArchivoVentas() const {
+    std::vector<Venta> ventas = gestorVentas_.listarVentas(); // copia: se ordena/filtra sin tocar el historial real.
+    std::cout << "\n-- Archivo de ventas (historial completo) --\n";
+    if (ventas.empty()) {
+        std::cout << "Todavia no se ha registrado ninguna venta.\n";
+        return;
+    }
+
+    // Mas reciente primero: es lo que casi siempre se quiere revisar,
+    // aunque el archivo interno vaya de mas vieja a mas nueva.
+    std::sort(ventas.begin(), ventas.end(),
+              [](const Venta& a, const Venta& b) { return a.getNumeroTransaccion() > b.getNumeroTransaccion(); });
+
+    std::string filtro = leerLinea("Filtrar por folio o fecha (Enter para ver todo): ");
+    if (!filtro.empty()) {
+        std::vector<Venta> filtradas;
+        for (const Venta& venta : ventas) {
+            std::string folioTexto = std::to_string(venta.getNumeroTransaccion());
+            if (folioTexto.find(filtro) != std::string::npos || venta.fechaComoTexto().find(filtro) != std::string::npos) {
+                filtradas.push_back(venta);
+            }
+        }
+        ventas = std::move(filtradas);
+    }
+
+    if (ventas.empty()) {
+        std::cout << "Ninguna venta coincide con ese filtro.\n";
+        return;
+    }
+
+    mostrarTablaVentas(ventas);
+
+    int numeroTransaccion = leerEntero("\nVer ticket de una venta (folio, 0 para omitir): ");
+    if (numeroTransaccion == 0) {
+        return;
+    }
+    const Venta* venta = gestorVentas_.buscarPorNumeroTransaccion(numeroTransaccion);
+    if (venta == nullptr) {
+        std::cout << "No existe una venta con ese folio.\n";
+        return;
+    }
+    std::cout << "\n" << generarTextoTicket(*venta, informacionNegocio_);
+}
+
+void Menu::mostrarTablaVentas(const std::vector<Venta>& ventas) const {
+    double totalGeneral = 0.0;
+    for (const Venta& venta : ventas) {
+        totalGeneral += venta.getTotal();
+    }
+    std::cout << ventas.size() << " venta(s) -- Total: $" << std::fixed << std::setprecision(2) << totalGeneral
+              << "\n\n";
+
+    std::cout << std::left << std::setw(8) << "Folio"
+               << std::setw(22) << "Fecha y hora"
+               << std::setw(20) << "Metodo de pago"
+               << std::right << std::setw(10) << "Unidades"
+               << std::setw(12) << "Total" << "\n";
+    std::cout << std::string(72, '-') << "\n";
+
+    for (const Venta& venta : ventas) {
+        int unidades = 0;
+        for (const DetalleVenta& detalle : venta.getDetalles()) {
+            unidades += detalle.getCantidad();
+        }
+        std::cout << std::left << std::setw(8) << venta.getNumeroTransaccion()
+                   << std::setw(22) << venta.fechaComoTexto()
+                   << std::setw(20) << metodoPagoATexto(venta.getMetodoPago())
+                   << std::right << std::setw(10) << unidades
+                   << std::setw(12) << std::fixed << std::setprecision(2) << venta.getTotal()
+                   << "\n";
+    }
+}
+
+void Menu::alGestionarClientes() {
+    bool volver = false;
+    while (!volver) {
+        std::cout << "\n--- Clientes y ventas al fiado ---\n";
+        std::cout << "1. Dar de alta un cliente\n";
+        std::cout << "2. Ver clientes y su saldo pendiente\n";
+        std::cout << "3. Registrar un abono (pago)\n";
+        std::cout << "0. Volver al menu principal\n";
+        try {
+            int opcion = leerEntero("Selecciona una opcion: ");
+            switch (opcion) {
+                case 1: alDarAltaCliente(); break;
+                case 2: alListarClientes(); break;
+                case 3: alRegistrarAbono(); break;
+                case 0: volver = true; break;
+                default: std::cout << "Opcion no valida.\n";
+            }
+        } catch (const FinDeEntrada&) {
+            throw; // igual que en gestionarProductos: propaga hasta ejecutar().
+        } catch (const std::exception& e) {
+            std::cout << "Error: " << e.what() << "\n";
+        }
+    }
+}
+
+void Menu::alDarAltaCliente() {
+    std::cout << "\n-- Nuevo cliente --\n";
+    std::string nombre = leerLinea("Nombre: ");
+    std::string telefono = leerLinea("Telefono (opcional, Enter para omitir): ");
+    const Cliente& cliente = gestorClientes_.agregarCliente(nombre, telefono);
+    std::cout << "Cliente agregado con id " << cliente.getId() << ".\n";
+    guardarDatos();
+}
+
+void Menu::alListarClientes() const {
+    std::vector<Cliente> clientes = gestorClientes_.listarTodos();
+    std::cout << "\n-- Clientes --\n";
+    if (clientes.empty()) {
+        std::cout << "Todavia no hay clientes registrados.\n";
+        return;
+    }
+    mostrarTablaClientes(clientes);
+}
+
+void Menu::mostrarTablaClientes(const std::vector<Cliente>& clientes) const {
+    std::cout << std::left << std::setw(6) << "Id"
+               << std::setw(25) << "Nombre"
+               << std::setw(15) << "Telefono"
+               << std::right << std::setw(16) << "Saldo pendiente" << "\n";
+    std::cout << std::string(62, '-') << "\n";
+
+    for (const Cliente& cliente : clientes) {
+        // El saldo NUNCA se lee de un campo guardado -- se calcula en
+        // vivo cada vez (ver GestorCreditos::saldoPendiente), asi que
+        // siempre refleja las ventas/abonos mas recientes.
+        double saldo = gestorCreditos_.saldoPendiente(cliente.getId());
+        std::cout << std::left << std::setw(6) << cliente.getId()
+                   << std::setw(25) << cliente.getNombre()
+                   << std::setw(15) << cliente.getTelefono()
+                   << std::right << std::setw(16) << std::fixed << std::setprecision(2) << saldo
+                   << "\n";
+    }
+}
+
+void Menu::alRegistrarAbono() {
+    std::vector<Cliente> clientes = gestorClientes_.listarTodos();
+    std::cout << "\n-- Registrar abono --\n";
+    if (clientes.empty()) {
+        std::cout << "Todavia no hay clientes registrados.\n";
+        return;
+    }
+    mostrarTablaClientes(clientes);
+
+    int id = leerEntero("\nId del cliente que abona: ");
+    const Cliente* cliente = gestorClientes_.buscarPorId(id);
+    if (cliente == nullptr) {
+        std::cout << "No existe un cliente con ese id.\n";
+        return;
+    }
+    double pendiente = gestorCreditos_.saldoPendiente(id);
+    if (pendiente <= 0.0) {
+        std::cout << cliente->getNombre() << " no tiene saldo pendiente.\n";
+        return;
+    }
+    std::cout << "Saldo pendiente de " << cliente->getNombre() << ": $" << std::fixed << std::setprecision(2)
+              << pendiente << "\n";
+
+    double monto = leerDouble("Monto a abonar: ");
+    // registrarAbono lanza EntradaInvalida si el monto excede el saldo
+    // pendiente (ver GestorCreditos.cpp) -- se deja propagar hasta el
+    // catch de alGestionarClientes(), igual que cualquier otro error de
+    // negocio en este programa.
+    const Abono& abono = gestorCreditos_.registrarAbono(id, monto);
+    try {
+        repositorioAbonos_.agregar(abono);
+    } catch (const std::exception& e) {
+        std::cout << "Aviso: no se pudo guardar el abono en disco (" << e.what() << ").\n";
+    }
+
+    std::cout << "Abono #" << abono.getNumeroAbono() << " registrado. Nuevo saldo pendiente: $" << std::fixed
+              << std::setprecision(2) << gestorCreditos_.saldoPendiente(id) << "\n";
+}
+
+const Cliente& Menu::elegirOCrearCliente() {
+    while (true) {
+        std::vector<Cliente> clientes = gestorClientes_.listarTodos();
+        if (!clientes.empty()) {
+            std::cout << "\nClientes existentes:\n";
+            mostrarTablaClientes(clientes);
+        }
+
+        std::cout << "\n-- Cliente para la venta al fiado --\n";
+        std::cout << "1. Usar un cliente existente (por id)\n";
+        std::cout << "2. Dar de alta un cliente nuevo\n";
+        int opcion = leerEntero("Selecciona una opcion: ");
+
+        if (opcion == 1) {
+            int id = leerEntero("Id del cliente: ");
+            const Cliente* cliente = gestorClientes_.buscarPorId(id);
+            if (cliente == nullptr) {
+                std::cout << "No existe un cliente con ese id.\n";
+                continue;
+            }
+            return *cliente;
+        } else if (opcion == 2) {
+            std::string nombre = leerLinea("Nombre del cliente nuevo: ");
+            std::string telefono = leerLinea("Telefono (opcional, Enter para omitir): ");
+            try {
+                return gestorClientes_.agregarCliente(nombre, telefono);
+            } catch (const std::exception& e) {
+                std::cout << "Error: " << e.what() << "\n";
+            }
+        } else {
+            std::cout << "Opcion invalida, intenta de nuevo.\n";
+        }
+    }
+}
+
 // --- Registro de ventas ---
 //
 // El flujo es tipo "carrito de compras": el usuario va agregando productos
@@ -597,6 +840,7 @@ MetodoPago Menu::preguntarMetodoPago() const {
         std::cout << "1. Efectivo\n";
         std::cout << "2. Tarjeta de credito\n";
         std::cout << "3. Tarjeta de debito\n";
+        std::cout << "4. Fiado (a credito, se cobra despues)\n";
         int opcion = leerEntero("Selecciona una opcion: ");
         switch (opcion) {
             case 1:
@@ -605,6 +849,8 @@ MetodoPago Menu::preguntarMetodoPago() const {
                 return MetodoPago::TarjetaCredito;
             case 3:
                 return MetodoPago::TarjetaDebito;
+            case 4:
+                return MetodoPago::Fiado;
             default:
                 std::cout << "Opcion invalida, intenta de nuevo.\n";
         }
@@ -623,7 +869,19 @@ void Menu::confirmarVenta(const std::map<std::string, int>& carrito) {
     }
 
     MetodoPago metodoPago = preguntarMetodoPago();
-    const Venta& venta = gestorVentas_.registrarVenta(detalles, metodoPago);
+
+    // Solo una venta al fiado necesita un cliente asociado -- para
+    // cualquier otro metodo de pago, clienteId/nombreCliente se quedan en
+    // sus valores "no aplica" (0 / cadena vacia, ver Venta.h).
+    int clienteId = 0;
+    std::string nombreCliente;
+    if (metodoPago == MetodoPago::Fiado) {
+        const Cliente& cliente = elegirOCrearCliente();
+        clienteId = cliente.getId();
+        nombreCliente = cliente.getNombre();
+    }
+
+    const Venta& venta = gestorVentas_.registrarVenta(detalles, metodoPago, clienteId, nombreCliente);
 
     // El ticket (mismo texto que se mostraria en la GUI, ver GeneradorTicket.h)
     // ya trae folio, fecha, metodo de pago y el desglose completo -- no hace
@@ -653,6 +911,7 @@ void Menu::guardarDatos() const {
     try {
         repositorioProductos_.guardarTodos(inventario_.listarTodos());
         repositorioVentas_.guardarTodas(gestorVentas_.listarVentas());
+        repositorioClientes_.guardarTodos(gestorClientes_.listarTodos());
     } catch (const std::exception& e) {
         std::cout << "Aviso: no se pudieron guardar los datos en disco (" << e.what() << ").\n";
     }

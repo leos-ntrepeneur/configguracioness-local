@@ -6,7 +6,8 @@
 
 GestorVentas::GestorVentas(Inventario& inventario) : inventario_(inventario) {}
 
-const Venta& GestorVentas::registrarVenta(const std::vector<DetalleVenta>& detalles, MetodoPago metodoPago) {
+const Venta& GestorVentas::registrarVenta(const std::vector<DetalleVenta>& detalles, MetodoPago metodoPago,
+                                           int clienteId, std::string nombreCliente) {
     if (detalles.empty()) {
         throw EntradaInvalida("La venta no tiene productos.");
     }
@@ -59,7 +60,7 @@ const Venta& GestorVentas::registrarVenta(const std::vector<DetalleVenta>& detal
     // asi un intento fallido (ej. StockInsuficiente) no "quema" un numero
     // de folio que nunca llego a usarse.
     int folio = siguienteNumeroTransaccion_++;
-    ventas_.emplace_back(detalles, folio, metodoPago);
+    ventas_.emplace_back(detalles, folio, metodoPago, clienteId, std::move(nombreCliente));
     return ventas_.back();
 }
 

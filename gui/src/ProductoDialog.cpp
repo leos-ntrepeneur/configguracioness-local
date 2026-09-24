@@ -1,8 +1,10 @@
 #include "ProductoDialog.h"
+#include "Iva.h"
 
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
+#include <QLabel>
 #include <QLineEdit>
 #include <QSpinBox>
 #include <QVBoxLayout>
@@ -31,6 +33,16 @@ ProductoDialog::ProductoDialog(Modo modo, const Producto* existente, QWidget* pa
     campoPrecio_->setDecimals(2);
     campoPrecio_->setPrefix("$ ");
 
+    // El precio que se captura aqui YA INCLUYE el IVA (asi se vende en
+    // Mexico: el precio en el anaquel es el precio final) -- esta
+    // etiqueta es SOLO informativa, para que quien da de alta el producto
+    // vea de un vistazo cuanto de ese precio es impuesto, sin que el
+    // campo de precio en si se modifique ni un centavo.
+    etiquetaIva_ = new QLabel(this);
+    etiquetaIva_->setProperty("clase", "secundario");
+    connect(campoPrecio_, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this,
+            &ProductoDialog::alCambiarPrecio);
+
     campoStock_ = new QSpinBox(this);
     campoStock_->setRange(0, Producto::STOCK_MAXIMO);
 
@@ -53,6 +65,12 @@ ProductoDialog::ProductoDialog(Modo modo, const Producto* existente, QWidget* pa
         campoCategoria_->setText(QString::fromStdString(existente->getCategoria()));
         campoStockMinimo_->setValue(existente->getStockMinimo());
     }
+    // setValue() de arriba ya dispara alCambiarPrecio() en modo Editar
+    // (via el connect de valueChanged), pero en modo Nuevo el campo se
+    // queda en su valor por defecto sin que ninguna señal se dispare --
+    // esta llamada explicita asegura que la etiqueta de IVA arranque
+    // poblada en los dos modos, no solo en uno.
+    alCambiarPrecio(campoPrecio_->value());
 
     // En modo Editar, solo el codigo queda bloqueado (es la clave del
     // producto, cambiarlo equivaldria a crear uno distinto). El stock SI
@@ -72,6 +90,7 @@ ProductoDialog::ProductoDialog(Modo modo, const Producto* existente, QWidget* pa
     formulario->addRow("Nombre:", campoNombre_);
     formulario->addRow("Categoria:", campoCategoria_);
     formulario->addRow("Precio:", campoPrecio_);
+    formulario->addRow("", etiquetaIva_);
     formulario->addRow("Stock actual:", campoStock_);
     formulario->addRow("Alertar si baja de:", campoStockMinimo_);
 
@@ -86,6 +105,11 @@ ProductoDialog::ProductoDialog(Modo modo, const Producto* existente, QWidget* pa
     auto* layoutPrincipal = new QVBoxLayout(this);
     layoutPrincipal->addLayout(formulario);
     layoutPrincipal->addWidget(botones);
+}
+
+void ProductoDialog::alCambiarPrecio(double precio) {
+    double montoIva = iva::calcularMontoIva(precio);
+    etiquetaIva_->setText(QString("IVA incluido (16%): $%1").arg(montoIva, 0, 'f', 2));
 }
 
 Producto ProductoDialog::obtenerProducto() const {

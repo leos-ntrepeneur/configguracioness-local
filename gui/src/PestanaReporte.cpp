@@ -1,5 +1,7 @@
 #include "PestanaReporte.h"
+#include "GeneradorTicket.h"
 #include "GraficaBarras.h"
+#include "TicketDialog.h"
 
 #include <QFrame>
 #include <QHeaderView>
@@ -9,8 +11,9 @@
 #include <QTableWidget>
 #include <QVBoxLayout>
 
-PestanaReporte::PestanaReporte(const GestorVentas& gestorVentas, QWidget* padre)
-    : QWidget(padre), gestorVentas_(gestorVentas) {
+PestanaReporte::PestanaReporte(const GestorVentas& gestorVentas, const InformacionNegocio& informacionNegocio,
+                                QWidget* padre)
+    : QWidget(padre), gestorVentas_(gestorVentas), informacionNegocio_(informacionNegocio) {
     etiquetaTransacciones_ = new QLabel(this);
     etiquetaTransacciones_->setProperty("clase", "secundario");
     etiquetaTotal_ = new QLabel(this);
@@ -36,7 +39,11 @@ PestanaReporte::PestanaReporte(const GestorVentas& gestorVentas, QWidget* padre)
     tablaTransacciones_->setColumnCount(5);
     tablaTransacciones_->setHorizontalHeaderLabels({"Folio", "Fecha y hora", "Metodo de pago", "Unidades", "Total"});
     tablaTransacciones_->setEditTriggers(QTableWidget::NoEditTriggers);
-    tablaTransacciones_->setSelectionMode(QTableWidget::NoSelection);
+    // A diferencia de tablaProductos_ (solo lectura, sin seleccion): esta
+    // tabla SI se puede seleccionar/hacer doble clic, para reabrir el
+    // ticket de esa transaccion (ver alVerTicketTransaccion).
+    tablaTransacciones_->setSelectionBehavior(QTableWidget::SelectRows);
+    tablaTransacciones_->setSelectionMode(QTableWidget::SingleSelection);
     tablaTransacciones_->verticalHeader()->setVisible(false);
     tablaTransacciones_->setAlternatingRowColors(true);
     tablaTransacciones_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
@@ -58,6 +65,8 @@ PestanaReporte::PestanaReporte(const GestorVentas& gestorVentas, QWidget* padre)
 
     auto* tituloTransacciones = new QLabel("Historial de transacciones:", this);
     tituloTransacciones->setProperty("clase", "titulo");
+    auto* ayudaTransacciones = new QLabel("Doble clic en una fila para ver su ticket completo.", this);
+    ayudaTransacciones->setProperty("clase", "secundario");
 
     auto* tituloCategorias = new QLabel("Ventas por categoria:", this);
     tituloCategorias->setProperty("clase", "titulo");
@@ -75,6 +84,7 @@ PestanaReporte::PestanaReporte(const GestorVentas& gestorVentas, QWidget* padre)
     layout->addWidget(tablaProductos_);
     layout->addSpacing(8);
     layout->addWidget(tituloTransacciones);
+    layout->addWidget(ayudaTransacciones);
     layout->addWidget(tablaTransacciones_);
     layout->addSpacing(8);
     layout->addWidget(tituloCategorias);
@@ -89,6 +99,9 @@ PestanaReporte::PestanaReporte(const GestorVentas& gestorVentas, QWidget* padre)
     auto* layoutPrincipal = new QVBoxLayout(this);
     layoutPrincipal->setContentsMargins(0, 0, 0, 0);
     layoutPrincipal->addWidget(areaDesplazable);
+
+    connect(tablaTransacciones_, &QTableWidget::cellDoubleClicked, this,
+            &PestanaReporte::alVerTicketTransaccion);
 
     actualizar();
 }
@@ -134,4 +147,19 @@ void PestanaReporte::actualizar() {
         barras.push_back(barra);
     }
     graficaCategorias_->setDatos(std::move(barras));
+}
+
+void PestanaReporte::alVerTicketTransaccion(int fila, int /*columna*/) {
+    QTableWidgetItem* item = tablaTransacciones_->item(fila, 0); // columna 0 = folio.
+    if (item == nullptr) {
+        return;
+    }
+    int numeroTransaccion = item->text().toInt();
+    const Venta* venta = gestorVentas_.buscarPorNumeroTransaccion(numeroTransaccion);
+    if (venta == nullptr) {
+        return; // no deberia pasar (el folio viene de la misma tabla), pero por si acaso.
+    }
+
+    TicketDialog dialogoTicket(generarTextoTicket(*venta, informacionNegocio_), this);
+    dialogoTicket.exec();
 }

@@ -25,7 +25,7 @@ std::chrono::system_clock::time_point parsearFecha(const std::string& texto) {
     return std::chrono::system_clock::from_time_t(comoTimeT);
 }
 
-constexpr int NUMERO_COLUMNAS = 9;
+constexpr int NUMERO_COLUMNAS = 10;
 
 } // namespace
 
@@ -50,13 +50,13 @@ void RepositorioCortesCsv::agregar(const CorteCaja& corte) {
 
     if (escribirEncabezado) {
         archivo << "numeroCorte,fechaHoraCierre,folioInicial,folioFinal,numeroTransacciones,"
-                   "totalVendido,totalEfectivo,totalTarjetaCredito,totalTarjetaDebito\n";
+                   "totalVendido,totalEfectivo,totalTarjetaCredito,totalTarjetaDebito,totalFiado\n";
     }
 
     archivo << corte.getNumeroCorte() << ',' << corte.fechaHoraCierreComoTexto() << ',' << corte.getFolioInicial()
             << ',' << corte.getFolioFinal() << ',' << corte.getNumeroTransacciones() << ','
             << corte.getTotalVendido() << ',' << corte.getTotalEfectivo() << ',' << corte.getTotalTarjetaCredito()
-            << ',' << corte.getTotalTarjetaDebito() << '\n';
+            << ',' << corte.getTotalTarjetaDebito() << ',' << corte.getTotalFiado() << '\n';
 }
 
 std::vector<CorteCaja> RepositorioCortesCsv::cargarTodos() {
@@ -86,7 +86,8 @@ std::vector<CorteCaja> RepositorioCortesCsv::cargarTodos() {
         try {
             resultado.emplace_back(std::stoi(campos[0]), parsearFecha(campos[1]), std::stoi(campos[2]),
                                     std::stoi(campos[3]), std::stoi(campos[4]), std::stod(campos[5]),
-                                    std::stod(campos[6]), std::stod(campos[7]), std::stod(campos[8]));
+                                    std::stod(campos[6]), std::stod(campos[7]), std::stod(campos[8]),
+                                    std::stod(campos[9]));
         } catch (const std::exception&) {
             continue; // numero/fecha invalidos: se descarta esa fila.
         }

@@ -14,7 +14,8 @@ CorteCaja::CorteCaja(int numeroCorte, const ReporteVentasDia& reporte,
       totalVendido_(reporte.totalVendido),
       totalEfectivo_(0.0),
       totalTarjetaCredito_(0.0),
-      totalTarjetaDebito_(0.0) {
+      totalTarjetaDebito_(0.0),
+      totalFiado_(0.0) {
     for (const TransaccionDia& t : reporte.transacciones) {
         // reporte.transacciones viene ordenado cronologicamente (ver
         // GestorVentas::generarReporteDelDia), pero folioInicial_/Final_ se
@@ -42,13 +43,16 @@ CorteCaja::CorteCaja(int numeroCorte, const ReporteVentasDia& reporte,
             case MetodoPago::TarjetaDebito:
                 totalTarjetaDebito_ += t.total;
                 break;
+            case MetodoPago::Fiado:
+                totalFiado_ += t.total;
+                break;
         }
     }
 }
 
 CorteCaja::CorteCaja(int numeroCorte, std::chrono::system_clock::time_point fechaHoraCierre, int folioInicial,
                       int folioFinal, int numeroTransacciones, double totalVendido, double totalEfectivo,
-                      double totalTarjetaCredito, double totalTarjetaDebito)
+                      double totalTarjetaCredito, double totalTarjetaDebito, double totalFiado)
     : numeroCorte_(numeroCorte),
       fechaHoraCierre_(fechaHoraCierre),
       folioInicial_(folioInicial),
@@ -57,7 +61,8 @@ CorteCaja::CorteCaja(int numeroCorte, std::chrono::system_clock::time_point fech
       totalVendido_(totalVendido),
       totalEfectivo_(totalEfectivo),
       totalTarjetaCredito_(totalTarjetaCredito),
-      totalTarjetaDebito_(totalTarjetaDebito) {}
+      totalTarjetaDebito_(totalTarjetaDebito),
+      totalFiado_(totalFiado) {}
 
 int CorteCaja::getNumeroCorte() const { return numeroCorte_; }
 std::chrono::system_clock::time_point CorteCaja::getFechaHoraCierre() const { return fechaHoraCierre_; }
@@ -68,6 +73,7 @@ double CorteCaja::getTotalVendido() const { return totalVendido_; }
 double CorteCaja::getTotalEfectivo() const { return totalEfectivo_; }
 double CorteCaja::getTotalTarjetaCredito() const { return totalTarjetaCredito_; }
 double CorteCaja::getTotalTarjetaDebito() const { return totalTarjetaDebito_; }
+double CorteCaja::getTotalFiado() const { return totalFiado_; }
 
 std::string CorteCaja::fechaHoraCierreComoTexto() const {
     // Misma logica que Venta::fechaComoTexto(): time_point -> time_t ->

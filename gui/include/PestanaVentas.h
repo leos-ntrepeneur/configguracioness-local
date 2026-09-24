@@ -12,6 +12,7 @@
 #include <map>
 #include <string>
 
+#include "GestorClientes.h"
 #include "GestorVentas.h"
 #include "InformacionNegocio.h"
 #include "Inventario.h"
@@ -20,7 +21,7 @@ class QLineEdit;
 class QTableWidget;
 class QLabel;
 class QPushButton;
-class QComboBox;
+class QButtonGroup;
 
 class PestanaVentas : public QWidget {
     Q_OBJECT
@@ -29,7 +30,9 @@ public:
     // `informacionNegocio` se recibe por referencia CONSTANTE: esta pestaña
     // solo la LEE para armar el ticket al confirmar una venta, quien la
     // edita es PestanaInformacionNegocio (via MainWindow, misma instancia).
-    PestanaVentas(Inventario& inventario, GestorVentas& gestorVentas,
+    // `gestorClientes` NO es constante: una venta al fiado puede dar de
+    // alta un cliente nuevo ahi mismo (ver SeleccionarClienteDialog).
+    PestanaVentas(Inventario& inventario, GestorVentas& gestorVentas, GestorClientes& gestorClientes,
                   const InformacionNegocio& informacionNegocio, QWidget* padre = nullptr);
 
     // Se llama cuando otra pestana (Productos) modifico el inventario, para
@@ -52,8 +55,19 @@ private:
     QString codigoSeleccionadoEnProductos() const;
     QString codigoSeleccionadoEnCarrito() const;
 
+    // Logica compartida por el flujo con dialogo (alAgregarAlCarrito, pide
+    // cantidad) y el boton rapido "+" por fila (siempre agrega 1): valida
+    // stock disponible (incluyendo lo que ya hubiera en el carrito) y
+    // actualiza carrito_. Lanza StockInsuficiente si no alcanza.
+    void agregarCantidadAlCarrito(const std::string& codigo, int cantidad);
+
+    // Traduce el boton de metodo de pago actualmente marcado en el grupo
+    // (ver grupoMetodoPago_) al enum MetodoPago correspondiente.
+    MetodoPago metodoPagoSeleccionado() const;
+
     Inventario& inventario_;
     GestorVentas& gestorVentas_;
+    GestorClientes& gestorClientes_;
     const InformacionNegocio& informacionNegocio_;
 
     // codigo -> cantidad acumulada, igual que en la version de consola.
@@ -67,8 +81,16 @@ private:
     QPushButton* botonQuitar_;
     QLabel* etiquetaTotal_;
     // Selector 1/2/3 de la consola (Menu::preguntarMetodoPago), pero como
-    // lista desplegable en vez de pregunta por teclado.
-    QComboBox* comboMetodoPago_;
+    // 3 botones tipo "interruptor" en vez de una lista desplegable -- mas
+    // rapido de usar con el mouse/tactil que abrir un combo y elegir.
+    // QButtonGroup no es un widget visible: solo coordina que, de los 3
+    // botones que se le agregan, nada mas uno quede :checked a la vez
+    // (setExclusive(true), el valor por defecto).
+    QButtonGroup* grupoMetodoPago_;
+    QPushButton* botonPagoEfectivo_;
+    QPushButton* botonPagoTarjetaCredito_;
+    QPushButton* botonPagoTarjetaDebito_;
+    QPushButton* botonPagoFiado_;
     QPushButton* botonConfirmar_;
 };
 

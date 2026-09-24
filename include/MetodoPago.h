@@ -11,7 +11,10 @@
 
 #include <string>
 
-enum class MetodoPago { Efectivo, TarjetaCredito, TarjetaDebito };
+// Fiado: venta a credito, cobrada mas tarde a un cliente de confianza
+// (comun en abarrotes/ferreterias mexicanas) -- ver Cliente.h y
+// GestorCreditos.h para el seguimiento del saldo pendiente.
+enum class MetodoPago { Efectivo, TarjetaCredito, TarjetaDebito, Fiado };
 
 // Texto legible (y a la vez seguro para CSV: sin comas) para mostrar en
 // pantalla, imprimir en un ticket, o guardar en el archivo de ventas.

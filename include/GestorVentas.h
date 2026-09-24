@@ -75,7 +75,15 @@ public:
     // siguienteNumeroTransaccion_). Devuelve una referencia const a la
     // Venta recien creada (vive dentro de ventas_, por eso la referencia es
     // valida mientras GestorVentas exista y no se borre esa venta).
-    const Venta& registrarVenta(const std::vector<DetalleVenta>& detalles, MetodoPago metodoPago);
+    //
+    // `clienteId`/`nombreCliente` solo aplican cuando metodoPago es
+    // MetodoPago::Fiado (0 / cadena vacia en cualquier otro caso) -- ver
+    // el comentario grande en Venta.h. Quien llame ya debio resolver el
+    // cliente (crearlo o buscarlo en GestorClientes) antes de llegar aqui:
+    // GestorVentas no conoce GestorClientes a proposito, para no acoplar
+    // "registrar una venta" con "administrar clientes".
+    const Venta& registrarVenta(const std::vector<DetalleVenta>& detalles, MetodoPago metodoPago,
+                                 int clienteId = 0, std::string nombreCliente = "");
 
     const std::vector<Venta>& listarVentas() const;
     std::size_t cantidadVentas() const;

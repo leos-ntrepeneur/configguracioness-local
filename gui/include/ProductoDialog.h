@@ -25,6 +25,7 @@
 class QLineEdit;
 class QDoubleSpinBox;
 class QSpinBox;
+class QLabel;
 
 class ProductoDialog : public QDialog {
     Q_OBJECT
@@ -42,12 +43,20 @@ public:
     // si algo no paso las validaciones de Producto.
     Producto obtenerProducto() const;
 
+private slots:
+    // Recalcula la etiqueta de IVA cada vez que el precio cambia (ver
+    // Iva.h): el precio capturado NUNCA se modifica por esto, es solo
+    // informativo -- en Mexico el precio que se captura ya incluye el
+    // IVA, a diferencia de EE.UU. donde el impuesto se suma despues.
+    void alCambiarPrecio(double precio);
+
 private:
     Modo modo_;
 
     QLineEdit* campoCodigo_;
     QLineEdit* campoNombre_;
     QDoubleSpinBox* campoPrecio_;
+    QLabel* etiquetaIva_;
     QSpinBox* campoStock_;
     QLineEdit* campoCategoria_;
     QSpinBox* campoStockMinimo_;

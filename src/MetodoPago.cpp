@@ -14,6 +14,8 @@ std::string metodoPagoATexto(MetodoPago metodo) {
             return "Tarjeta de credito";
         case MetodoPago::TarjetaDebito:
             return "Tarjeta de debito";
+        case MetodoPago::Fiado:
+            return "Fiado";
     }
     return "Desconocido"; // inalcanzable si el switch cubre todos los casos.
 }
@@ -22,5 +24,6 @@ MetodoPago textoAMetodoPago(const std::string& texto) {
     if (texto == "Efectivo") return MetodoPago::Efectivo;
     if (texto == "Tarjeta de credito") return MetodoPago::TarjetaCredito;
     if (texto == "Tarjeta de debito") return MetodoPago::TarjetaDebito;
+    if (texto == "Fiado") return MetodoPago::Fiado;
     throw EntradaInvalida("Metodo de pago desconocido: " + texto);
 }
